@@ -1,0 +1,460 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  MANAGER
+  STAFF
+  ADMIN
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
+}
+
+enum MedicationType {
+  REGULAR
+  PRN
+}
+
+enum StockType {
+  RECEIVED
+  USED
+  DISPOSED
+}
+
+enum ComplianceStatus {
+  PENDING
+  COMPLETED
+  EXPIRED
+}
+
+enum RoomType {
+  BEDROOM
+  BATHROOM
+  KITCHEN
+  LOUNGE
+  OFFICE
+  MEDICATION_ROOM
+  GARDEN
+}
+
+enum CheckType {
+  FIRE_SAFETY
+  EMERGENCY_LIGHTING
+  EVACUATION_DRILL
+  SMOKE_DETECTOR
+  GAS_SAFETY
+  ELECTRICAL_SAFETY
+  PAT_TESTING
+  LEGIONELLA
+  WATER_TEMPERATURE
+  ASBESTOS
+  WINDOW_RESTRICTOR
+  BEDROOM_DOOR
+  KITCHEN_SAFETY
+  FOOD_HYGIENE
+  FRIDGE_FREEZER
+  INFECTION_CONTROL
+  FIRST_AID
+  COSHH
+  CLEANING
+  ENVIRONMENTAL
+  GARDEN_SECURITY
+  CCTV
+  INTERNET_SAFETY
+  ACCESSIBILITY
+  FURNISHING_DAMAGE
+  MAINTENANCE_REPAIR
+  CONTRACTOR_VISIT
+  CERTIFICATE_EXPIRY
+}
+
+enum VehicleCheckType {
+  MOT
+  SERVICING
+  TYRE_CHECK
+  LIGHTS_BRAKES
+  FLUIDS
+  CLEANLINESS
+  BREAKDOWN_COVER
+  INSURANCE
+  BUSINESS_INSURANCE
+  CHILD_TRANSPORT
+  TRANSPORT_RISK
+  LICENCE_VERIFICATION
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String
+  role        Role
+  homeId      String?
+  home        Home?    @relation(fields: [homeId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  incidents   Incident[]
+  tasks       Task[]
+  medications Medication[]
+  trainings   Training[]
+  supervisions Supervision[]
+  audits      AuditLog[]
+  timeSaveds  TimeSaved[]
+}
+
+model Home {
+  id        String   @id @default(cuid())
+  name      String
+  address   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users      User[]
+  incidents  Incident[]
+  buildings  Building[]
+  vehicles   Vehicle[]
+  healthChecks HealthCheck[]
+  timeSaveds TimeSaved[]
+}
+
+model Incident {
+  id            String   @id @default(cuid())
+  title         String
+  description   String
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  homeId        String
+  home          Home     @relation(fields: [homeId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  safeguarding  Safeguarding?
+  bodyMap       BodyMap?
+  chronology    Chronology?
+  tasks         Task[]
+  oversight     Oversight?
+  ariaSuggestions AriaSuggestion[]
+}
+
+model Safeguarding {
+  id         String   @id @default(cuid())
+  incidentId String   @unique
+  incident   Incident @relation(fields: [incidentId], references: [id])
+  details    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model BodyMap {
+  id         String   @id @default(cuid())
+  incidentId String   @unique
+  incident   Incident @relation(fields: [incidentId], references: [id])
+  marks      Json // array of mark objects
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Chronology {
+  id         String   @id @default(cuid())
+  incidentId String   @unique
+  incident   Incident @relation(fields: [incidentId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  entries ChronologyEntry[]
+}
+
+model ChronologyEntry {
+  id           String     @id @default(cuid())
+  chronologyId String
+  chronology   Chronology @relation(fields: [chronologyId], references: [id])
+  date         DateTime
+  description  String
+  source       String
+  createdAt    DateTime   @default(now())
+}
+
+model Task {
+  id             String     @id @default(cuid())
+  title          String
+  description    String
+  assignedTo     String
+  assignedUser   User       @relation(fields: [assignedTo], references: [id])
+  priority       Priority
+  dueDate        DateTime?
+  status         TaskStatus
+  linkedRecords  Json
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  vehicleIssues  VehicleIssue[]
+}
+
+model Medication {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  name      String
+  type      MedicationType
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  doses Dose[]
+  stocks Stock[]
+}
+
+model Dose {
+  id           String     @id @default(cuid())
+  medicationId String
+  medication   Medication @relation(fields: [medicationId], references: [id])
+  scheduledAt  DateTime
+  givenAt      DateTime?
+  givenBy      String
+  notes        String?
+  createdAt    DateTime   @default(now())
+}
+
+model Stock {
+  id           String     @id @default(cuid())
+  medicationId String
+  medication   Medication @relation(fields: [medicationId], references: [id])
+  quantity     Int
+  date         DateTime
+  type         StockType
+  createdAt    DateTime   @default(now())
+}
+
+model Oversight {
+  id         String   @id @default(cuid())
+  incidentId String   @unique
+  incident   Incident @relation(fields: [incidentId], references: [id])
+  draft      String
+  approved   Boolean  @default(false)
+  approvedBy String?
+  approvedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Training {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  course    String
+  completed DateTime?
+  expiry    DateTime?
+  status    ComplianceStatus
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Supervision {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  date       DateTime
+  notes      String
+  supervisor String
+  createdAt  DateTime @default(now())
+}
+
+model Building {
+  id        String   @id @default(cuid())
+  homeId    String
+  home      Home     @relation(fields: [homeId], references: [id])
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rooms  Room[]
+  assets Asset[]
+  checks BuildingCheck[]
+}
+
+model Room {
+  id         String   @id @default(cuid())
+  buildingId String
+  building   Building @relation(fields: [buildingId], references: [id])
+  name       String
+  type       RoomType
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  checks RoomCheck[]
+}
+
+model Asset {
+  id         String   @id @default(cuid())
+  buildingId String?
+  building   Building? @relation(fields: [buildingId], references: [id])
+  name       String
+  type       String
+  location   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  checks AssetCheck[]
+}
+
+model BuildingCheck {
+  id                String     @id @default(cuid())
+  buildingId        String
+  building          Building   @relation(fields: [buildingId], references: [id])
+  type              CheckType
+  dueDate           DateTime
+  completed         Boolean    @default(false)
+  completedAt       DateTime?
+  pass              Boolean?
+  notes             String?
+  actions           String?
+  targetCompletion  DateTime?
+  managerOversight  Boolean    @default(false)
+  linkedMaintenance String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+}
+
+model RoomCheck {
+  id                String     @id @default(cuid())
+  roomId            String
+  room              Room       @relation(fields: [roomId], references: [id])
+  type              CheckType
+  dueDate           DateTime
+  completed         Boolean    @default(false)
+  completedAt       DateTime?
+  pass              Boolean?
+  notes             String?
+  actions           String?
+  targetCompletion  DateTime?
+  managerOversight  Boolean    @default(false)
+  linkedMaintenance String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+}
+
+model AssetCheck {
+  id                String     @id @default(cuid())
+  assetId           String
+  asset             Asset      @relation(fields: [assetId], references: [id])
+  type              CheckType
+  dueDate           DateTime
+  completed         Boolean    @default(false)
+  completedAt       DateTime?
+  pass              Boolean?
+  notes             String?
+  actions           String?
+  targetCompletion  DateTime?
+  managerOversight  Boolean    @default(false)
+  linkedMaintenance String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+}
+
+model Vehicle {
+  id               String   @id @default(cuid())
+  homeId           String
+  home             Home     @relation(fields: [homeId], references: [id])
+  make             String
+  model            String
+  reg              String
+  motExpiry        DateTime
+  insuranceExpiry  DateTime
+  taxExpiry        DateTime
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  checks VehicleCheck[]
+  issues VehicleIssue[]
+}
+
+model VehicleCheck {
+  id         String   @id @default(cuid())
+  vehicleId  String
+  vehicle    Vehicle @relation(fields: [vehicleId], references: [id])
+  type       VehicleCheckType
+  dueDate    DateTime
+  completed  Boolean @default(false)
+  completedAt DateTime?
+  pass       Boolean?
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model VehicleIssue {
+  id         String   @id @default(cuid())
+  vehicleId  String
+  vehicle    Vehicle @relation(fields: [vehicleId], references: [id])
+  description String
+  loggedAt   DateTime
+  resolved   Boolean @default(false)
+  taskId     String?
+  task       Task?   @relation(fields: [taskId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model HealthCheck {
+  id         String   @id @default(cuid())
+  homeId     String
+  home       Home     @relation(fields: [homeId], references: [id])
+  date       DateTime @default(now())
+  scores     Json
+  actionPlan Json
+  riskLevel  String
+  createdAt  DateTime @default(now())
+}
+
+model TimeSaved {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  homeId    String?
+  home      Home?    @relation(fields: [homeId], references: [id])
+  workflow  String
+  savedTime Int
+  date      DateTime @default(now())
+}
+
+model AriaSuggestion {
+  id         String   @id @default(cuid())
+  recordId   String
+  recordType String
+  suggestion String
+  style      String
+  accepted   Boolean @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  incident   Incident? @relation(fields: [recordId], references: [id])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  action     String
+  recordId   String
+  recordType String
+  timestamp  DateTime @default(now())
+}
