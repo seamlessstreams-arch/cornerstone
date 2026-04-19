@@ -6,6 +6,19 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { AcaciaLogo } from '@/components/branding/acacia-logo'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 
+function formatSignInError(message?: string) {
+  const normalized = (message ?? '').toLowerCase()
+  if (
+    normalized.includes('failed to fetch') ||
+    normalized.includes('network') ||
+    normalized.includes('err_name_not_resolved')
+  ) {
+    return 'Unable to reach Supabase auth. Check NEXT_PUBLIC_SUPABASE_URL and local DNS/network connectivity.'
+  }
+
+  return message || 'Unable to sign in with the provided credentials.'
+}
+
 function SignInContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -40,7 +53,7 @@ function SignInContent() {
 
       if (error) {
         setStatusMessage('')
-        setErrorMessage(error.message || 'Unable to sign in with the provided credentials.')
+        setErrorMessage(formatSignInError(error.message))
         return
       }
 
@@ -48,7 +61,9 @@ function SignInContent() {
       router.push(nextPath)
     } catch {
       setStatusMessage('')
-      setErrorMessage('Supabase auth is not configured. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.')
+      setErrorMessage(
+        'Supabase auth is not configured. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.'
+      )
     } finally {
       setIsSubmitting(false)
     }
