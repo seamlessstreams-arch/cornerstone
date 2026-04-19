@@ -10,6 +10,7 @@ This update delivers a full Phase 3 app shell and protected API foundation for C
 - b589324: feat: add protected APIs and phase-3 service layer
 - 911f33e: chore: add supabase foundation and phase-3 migrations
 - f69b1b5: docs: update README and add client demo script
+- b3e0c82: fix: improve sign-in error messaging for auth network failures
 
 ## Key Changes
 
@@ -22,6 +23,7 @@ This update delivers a full Phase 3 app shell and protected API foundation for C
 - Added actor resolution and role normalization helpers.
 - Added authenticated actor endpoint at /api/auth/me.
 - Added sign-in, sign-out, and reset-password page flows.
+- Improved sign-in error messaging for network and DNS failures when Supabase auth is unreachable.
 
 ### UI Shell and Module Pages
 - Added shared shell, top nav, protected banners, and branding components.
