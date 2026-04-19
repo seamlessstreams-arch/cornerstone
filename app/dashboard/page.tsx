@@ -1,69 +1,54 @@
+import { EmptyState, PageShell, ShellCard, ShellTable } from '@/components/shell/page-shell'
+
+function StatusPill({ label, tone }: { label: string; tone: 'amber' | 'blue' | 'slate' }) {
+  const toneClass =
+    tone === 'amber'
+      ? 'bg-amber-100 text-amber-800 border-amber-200'
+      : tone === 'blue'
+      ? 'bg-blue-100 text-blue-800 border-blue-200'
+      : 'bg-slate-100 text-slate-700 border-slate-200'
+
+  return <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${toneClass}`}>{label}</span>
+}
+
 export default function ManagerDashboard() {
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Manager Dashboard</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="bg-white p-4 rounded shadow">
-          <h2 className="text-lg font-semibold mb-2">Live Priorities</h2>
-          <p>Overdue tasks, incidents awaiting oversight, etc.</p>
-        </div>
-        <div className="bg-white p-4 rounded shadow">
-          <h2 className="text-lg font-semibold mb-2">Safeguarding Alerts</h2>
-          <p>Alerts here.</p>
-        </div>
-        <div className="bg-white p-4 rounded shadow">
-          <h2 className="text-lg font-semibold mb-2">Medication Exceptions</h2>
-          <p>Exceptions here.</p>
-        </div>
-        <div className="bg-white p-4 rounded shadow">
-          <h2 className="text-lg font-semibold mb-2">Training & Supervision Gaps</h2>
-          <p>Gaps here.</p>
-        </div>
-        <div className="bg-white p-4 rounded shadow">
-          <h2 className="text-lg font-semibold mb-2">Repairs & Maintenance</h2>
-          <p>Issues here.</p>
-        </div>
-        <div className="bg-white p-4 rounded shadow">
-          <h2 className="text-lg font-semibold mb-2">Compliance Risks</h2>
-          <p>Risks here.</p>
-        </div>
-        <div className="bg-white p-4 rounded shadow">
-          <h2 className="text-lg font-semibold mb-2">Overdue Home Safety Checks</h2>
-          <p>Checks here.</p>
-        </div>
-        <div className="bg-white p-4 rounded shadow">
-          <h2 className="text-lg font-semibold mb-2">Expiring Certificates</h2>
-          <p>Certificates here.</p>
-        </div>
-        <div className="bg-white p-4 rounded shadow">
-          <h2 className="text-lg font-semibold mb-2">Vehicle Compliance Alerts</h2>
-          <p>Alerts here.</p>
-        </div>
-        <div className="bg-white p-4 rounded shadow">
-          <h2 className="text-lg font-semibold mb-2">Time Saved Widget</h2>
-          <p>You saved 1h 20m this week</p>
-        </div>
-        <div className="bg-white p-4 rounded shadow">
-          <h2 className="text-lg font-semibold mb-2">Health Check Widget</h2>
-          <p>Operational Score: 85%</p>
-        </div>
-        <div className="bg-white p-4 rounded shadow">
-          <h2 className="text-lg font-semibold mb-2">Aria Suggestions</h2>
-          <p>Suggestions here.</p>
-        </div>
-        <div className="bg-white p-4 rounded shadow">
-          <h2 className="text-lg font-semibold mb-2">Unresolved Hazards</h2>
-          <p>Hazards here.</p>
-        </div>
-        <div className="bg-white p-4 rounded shadow">
-          <h2 className="text-lg font-semibold mb-2">Open Complaints</h2>
-          <p>Complaints here.</p>
-        </div>
-        <div className="bg-white p-4 rounded shadow">
-          <h2 className="text-lg font-semibold mb-2">Same-Day Urgent Actions</h2>
-          <p>Actions here.</p>
-        </div>
+    <PageShell
+      title="Dashboard"
+      description="Acacia Therapy Homes operations overview, with secure role-aware access and cloud-ready module foundations."
+    >
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <ShellCard title="Open Incidents">
+          <p className="text-3xl font-semibold text-slate-900">4</p>
+          <p className="mt-1 text-sm text-slate-600">1 requiring management review</p>
+        </ShellCard>
+        <ShellCard title="Task Completion">
+          <p className="text-3xl font-semibold text-slate-900">87%</p>
+          <p className="mt-1 text-sm text-slate-600">Completed within target SLA</p>
+        </ShellCard>
+        <ShellCard title="Compliance Risk">
+          <p className="text-3xl font-semibold text-slate-900">2</p>
+          <p className="mt-1 text-sm text-slate-600">Items due in the next 7 days</p>
+        </ShellCard>
+        <ShellCard title="Unread Notifications">
+          <p className="text-3xl font-semibold text-slate-900">6</p>
+          <p className="mt-1 text-sm text-slate-600">Role-targeted alerts pending</p>
+        </ShellCard>
       </div>
-    </div>
-  );
+
+      <ShellTable
+        headers={["Area", "Status", "Owner", "Due"]}
+        rows={[
+          ['Medication audit', <StatusPill label="In progress" tone="blue" key="s1" />, 'Training / Compliance Lead', '2026-04-22'],
+          ['Safer recruitment checks', <StatusPill label="Ready for review" tone="amber" key="s2" />, 'Safer Recruitment Officer', '2026-04-25'],
+          ['Independent visitor report', <StatusPill label="Awaiting upload" tone="slate" key="s3" />, 'Read-only Auditor', '2026-04-29']
+        ]}
+      />
+
+      <EmptyState
+        title="Provider modules not yet connected"
+        description="Integration provider placeholders are provisioned and ready for HR, LMS, and external compliance sync flows."
+      />
+    </PageShell>
+  )
 }
