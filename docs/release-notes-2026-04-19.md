@@ -11,6 +11,7 @@ This update delivers a full Phase 3 app shell and protected API foundation for C
 - 911f33e: chore: add supabase foundation and phase-3 migrations
 - f69b1b5: docs: update README and add client demo script
 - b3e0c82: fix: improve sign-in error messaging for auth network failures
+- d7d9a11: chore: patch transitive hono server vulnerability via override
 
 ## Key Changes
 
@@ -36,6 +37,7 @@ This update delivers a full Phase 3 app shell and protected API foundation for C
 ### Data and Migrations
 - Added Supabase Phase 1 foundation and Phase 3 migrations.
 - Updated Prisma and TypeScript configuration for runtime support.
+- Added npm override to pin @hono/node-server to a patched transitive version.
 - Updated ignore rules for local artifacts:
   - dev.db
   - supabase/.temp/
