@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Activity, AlertCircle, Loader2, Download, Clock, User,
-  Filter, Lock,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {

@@ -8,7 +8,7 @@ import type {
   IncidentType, IncidentSeverity, ShiftType, LeaveType,
   EmploymentType, EmploymentStatus, TrainingCategory,
   ComplianceStatus, DocumentCategory, MedicationType,
-  AdministrationStatus, SupervisionType, AppraisalRating,
+  AdministrationStatus, SupervisionType,
   ExpenseCategory, ExpenseStatus, RecruitmentStage,
   CareFormType, CareFormStatus,
 } from "@/lib/constants";

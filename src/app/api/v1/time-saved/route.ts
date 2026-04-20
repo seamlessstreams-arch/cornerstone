@@ -1,17 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getStore } from "@/lib/db/store";
 import { todayStr } from "@/lib/utils";
 import type { TimeSavedSummary } from "@/types/extended";
-
-const BASELINE_MINUTES: Record<string, number> = {
-  auto_fill: 5,
-  linked_record: 4,
-  aria_draft: 15,
-  auto_task: 5,
-  auto_handover: 10,
-  one_click_summary: 8,
-  avoided_duplicate: 6,
-};
 
 // Simulated accumulated savings for demo purposes
 const DEMO_SAVINGS = [
@@ -23,7 +13,7 @@ const DEMO_SAVINGS = [
   { category: "One-click summaries", minutes: 24, count: 3 },
 ];
 
-export async function GET(_req: NextRequest) {
+export async function GET() {
   const store = getStore();
   const today = todayStr();
   const weekAgo = new Date();

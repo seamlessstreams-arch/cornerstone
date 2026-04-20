@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db/store";
-import { generateId } from "@/lib/utils";
 import type { CandidateReference } from "@/types/recruitment";
 
 // ── GET /api/v1/recruitment/references?candidate_id= ─────────────────────────
@@ -81,7 +80,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const body = await req.json();
   const { id, candidate_id, status, received_date, employment_dates_confirmed,
-    role_confirmed, performance_rating, safeguarding_concerns, safeguarding_detail,
+    role_confirmed, performance_rating, safeguarding_concerns,
     would_re_employ, would_re_employ_reason, discrepancy_flag, discrepancy_notes } = body;
 
   if (!id) {

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar } from "@/components/ui/avatar";
 import {
   Search, Plus, Users, Clock, Shield, GraduationCap,
-  Mail, Phone, ChevronRight, AlertTriangle, CheckCircle2,
+  Mail, Phone, ChevronRight, AlertTriangle,
   Loader2, Calendar,
 } from "lucide-react";
 import { useStaff, type StaffEnriched } from "@/hooks/use-staff";
@@ -23,7 +23,7 @@ export default function StaffPage() {
   const today = todayStr();
 
   const { data, isLoading, isError } = useStaff();
-  const staffList: StaffEnriched[] = data?.data ?? [];
+  const staffList: StaffEnriched[] = useMemo(() => data?.data ?? [], [data?.data]);
   const meta = data?.meta;
 
   const roles = useMemo(() => [...new Set(staffList.map((s) => s.role))], [staffList]);

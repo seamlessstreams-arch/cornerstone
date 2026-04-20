@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db/store";
 import { todayStr } from "@/lib/utils";
 
-export async function GET(_req: NextRequest) {
+export async function GET() {
   const today = todayStr();
 
   const activeTasks = db.tasks.findActive();

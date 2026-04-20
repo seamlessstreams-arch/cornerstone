@@ -10,9 +10,9 @@ import { Input } from "@/components/ui/input";
 import { AriaPanel } from "@/components/aria/aria-panel";
 import {
   Building2, AlertTriangle, CheckCircle2, Clock, XCircle,
-  Plus, Search, Shield, Flame, Zap, Droplets, Thermometer,
-  FileText, Upload, ChevronRight, Calendar, AlertCircle,
-  ClipboardList, Wrench, Eye, CheckSquare, Filter,
+  Plus, Search, Shield, Flame, Zap,
+  FileText, Upload, Calendar, AlertCircle,
+  ClipboardList, Wrench, Eye, CheckSquare,
 } from "lucide-react";
 import { cn, formatDate, todayStr } from "@/lib/utils";
 

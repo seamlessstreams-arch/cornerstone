@@ -2,11 +2,11 @@
 
 import React, { useMemo, useState } from "react";
 import { PageShell } from "@/components/layout/page-shell";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  FileCheck, AlertTriangle, CheckCircle2, Clock, AlertCircle,
+  FileCheck, AlertTriangle, AlertCircle,
   Loader2, Info, Plus, Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";

@@ -4,14 +4,12 @@ import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import {
-  Users, Search, Filter, Plus, ChevronRight, AlertTriangle,
-  CheckCircle2, Clock, Shield, FileCheck, User, Star,
-  ArrowUpDown, Eye, MoreHorizontal, Calendar, Mail,
+  Users, Search, Plus, AlertTriangle,
+  CheckCircle2, ArrowUpDown, Eye, Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRecruitment } from "@/hooks/use-recruitment";

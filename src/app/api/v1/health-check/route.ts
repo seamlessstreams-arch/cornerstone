@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db/store";
 import { todayStr } from "@/lib/utils";
 import type { HealthCheckScore, HealthCheckAction } from "@/types/extended";
@@ -8,14 +8,13 @@ function score(good: number, total: number, weight = 1): number {
   return Math.round((good / total) * 100 * weight);
 }
 
-export async function GET(_req: NextRequest) {
+export async function GET() {
   const today = todayStr();
   const actions: HealthCheckAction[] = [];
 
   // ── Operational score ─────────────────────────────────────────────────────
   const activeTasks = db.tasks.findActive();
   const overdueTasks = db.tasks.findOverdue();
-  const completedToday = db.tasks.findAll().filter((t) => t.status === "completed" && t.completed_at?.startsWith(today)).length;
   const overdueRatio = activeTasks.length > 0 ? overdueTasks.length / activeTasks.length : 0;
   const operationalScore = Math.max(0, Math.round(100 - overdueRatio * 100));
 

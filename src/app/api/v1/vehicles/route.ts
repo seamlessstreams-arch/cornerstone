@@ -3,7 +3,7 @@ import { db } from "@/lib/db/store";
 import { processVehicleDefect } from "@/lib/db/linked-updates";
 import { todayStr } from "@/lib/utils";
 
-export async function GET(_req: NextRequest) {
+export async function GET() {
   const vehicles = db.vehicles.findAll();
   const allChecks = db.vehicleChecks.findAll();
   const defects = db.vehicleChecks.findDefects();

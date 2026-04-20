@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db/store";
-import { processMedicationException } from "@/lib/db/linked-updates";
 import { todayStr } from "@/lib/utils";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const childId = searchParams.get("child_id");
-  const view = searchParams.get("view"); // "mar" | "schedule" | "prn" | "stock"
 
   const meds = childId ? db.medications.findByChild(childId) : db.medications.findActive();
   const admins = childId ? db.medicationAdministrations.findByChild(childId) : db.medicationAdministrations.findAll();

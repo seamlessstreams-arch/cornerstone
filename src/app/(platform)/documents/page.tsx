@@ -2,24 +2,22 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { PageShell } from "@/components/layout/page-shell";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Avatar } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import {
   FileText, Upload, Search, FolderOpen, Eye,
   CheckSquare, AlertTriangle, Clock, Download, ExternalLink,
   History, Shield, Users, BookOpen, ClipboardList,
-  Star, FileCheck, RefreshCw, Tag, Plus, CheckCircle2,
+  Star, FileCheck, CheckCircle2,
 } from "lucide-react";
-import { getStaffName } from "@/lib/seed-data";
 import { useStaff } from "@/hooks/use-staff";
 import { useDocuments } from "@/hooks/use-documents";
 import { cn, formatDate, todayStr, daysFromNow } from "@/lib/utils";
 import { DOCUMENT_CATEGORIES } from "@/lib/constants";
-import type { Document, DocumentReadReceipt } from "@/types";
+import type { Document } from "@/types";
 
 type Tab = "library" | "read_sign" | "upload";
 type CategoryFilter = "all" | string;
@@ -161,14 +159,17 @@ function DocumentCard({
 
 export default function DocumentsPage() {
   const staffQuery = useStaff();
-  const allActiveStaff = (staffQuery.data?.data ?? []).filter((s) => s.is_active);
+  const allActiveStaff = useMemo(
+    () => (staffQuery.data?.data ?? []).filter((s) => s.is_active),
+    [staffQuery.data?.data]
+  );
   const [tab, setTab] = useState<Tab>("library");
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState<CategoryFilter>("all");
 
   const docsQuery = useDocuments();
-  const documents = docsQuery.data?.data ?? [];
-  const allReceipts = docsQuery.data?.receipts ?? [];
+  const documents = useMemo(() => docsQuery.data?.data ?? [], [docsQuery.data?.data]);
+  const allReceipts = useMemo(() => docsQuery.data?.receipts ?? [], [docsQuery.data?.receipts]);
 
   // Track which docs the current user (darren) has personally signed this session
   const [signedByMe, setSignedByMe] = useState<Set<string>>(() => new Set<string>());
@@ -220,7 +221,7 @@ export default function DocumentsPage() {
     const expiring = documents.filter((d) => d.expiry_date && d.expiry_date <= daysFromNow(30) && d.expiry_date >= todayStr());
     const expired = documents.filter((d) => d.expiry_date && d.expiry_date < todayStr());
     return { total: documents.length, requireSign: requireSign.length, allSigned: allSigned.length, expiring: expiring.length, expired: expired.length };
-  }, [documents, signedByMe]);
+  }, [documents, signedByMe, allReceipts, allActiveStaff.length]);
 
   const tabs = [
     { id: "library" as Tab, label: "Document Library", icon: FolderOpen },

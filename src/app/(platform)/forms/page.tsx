@@ -68,7 +68,7 @@ export default function FormsPage() {
   const today = todayStr();
 
   const formsQuery = useForms();
-  const forms: CareForm[] = formsQuery.data?.data ?? [];
+  const forms: CareForm[] = useMemo(() => formsQuery.data?.data ?? [], [formsQuery.data?.data]);
   const meta = formsQuery.data?.meta;
 
   const filtered = useMemo(() => {

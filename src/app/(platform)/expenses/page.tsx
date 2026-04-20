@@ -117,9 +117,12 @@ function ExpenseRow({
 
 export default function ExpensesPage() {
   const staffQuery = useStaff();
-  const allActiveStaff = (staffQuery.data?.data ?? []).filter((s) => s.is_active);
+  const allActiveStaff = useMemo(
+    () => (staffQuery.data?.data ?? []).filter((s) => s.is_active),
+    [staffQuery.data?.data]
+  );
   const expensesQuery = useExpenses();
-  const expenses: Expense[] = expensesQuery.data?.data ?? [];
+  const expenses: Expense[] = useMemo(() => expensesQuery.data?.data ?? [], [expensesQuery.data?.data]);
   const createExpense = useCreateExpense();
   const updateExpense = useUpdateExpense();
 

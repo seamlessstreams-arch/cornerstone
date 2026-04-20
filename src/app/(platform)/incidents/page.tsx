@@ -1,26 +1,22 @@
 "use client";
 
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { PageShell } from "@/components/layout/page-shell";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Avatar } from "@/components/ui/avatar";
 import { AriaPanel } from "@/components/aria/aria-panel";
 import {
   AlertTriangle, Shield, Eye, Clock, CheckCircle2, FileText,
-  Users, MapPin, Calendar, Plus, Search, Sparkles, Phone,
-  UserCheck, X, ChevronRight, Bell, ClipboardList, Loader2,
-  TrendingUp, ArrowUpRight,
+  Users, MapPin, Calendar, Plus, Search, Sparkles,
+  X, Bell, ClipboardList, Loader2,
 } from "lucide-react";
 import { useIncidents, useAddOversight, useCreateIncident } from "@/hooks/use-incidents";
 import { useYoungPeople } from "@/hooks/use-young-people";
 import { getStaffName, getYPName, getYPById } from "@/lib/seed-data";
 import { INCIDENT_TYPE_LABELS, INCIDENT_TYPES, INCIDENT_SEVERITIES } from "@/lib/constants";
-import { cn, formatDate, formatRelative, todayStr } from "@/lib/utils";
-import type { Incident, IncidentNotification } from "@/types";
+import { cn, formatDate, todayStr } from "@/lib/utils";
+import type { Incident } from "@/types";
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -223,7 +219,7 @@ function AllIncidentsTab() {
   const ypQuery = useYoungPeople();
   const allYP = ypQuery.data?.data ?? [];
 
-  const incidents: Incident[] = query.data?.data ?? [];
+  const incidents = useMemo<Incident[]>(() => query.data?.data ?? [], [query.data?.data]);
 
   const stats = useMemo(() => ({
     total: incidents.length,
@@ -695,7 +691,7 @@ const EMPTY_FORM = {
   body_map_required: false,
 };
 
-function LogIncidentTab({ onSuccess }: { onSuccess?: () => void }) {
+function LogIncidentTab() {
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [notifRole, setNotifRole] = useState("");
   const [notifName, setNotifName] = useState("");
@@ -1097,7 +1093,7 @@ export default function IncidentsPage() {
         {/* Tab content */}
         {activeTab === "all" && <AllIncidentsTab />}
         {activeTab === "oversight" && <OversightQueueTab />}
-        {activeTab === "log" && <LogIncidentTab onSuccess={() => setActiveTab("all")} />}
+        {activeTab === "log" && <LogIncidentTab />}
       </div>
     </PageShell>
   );

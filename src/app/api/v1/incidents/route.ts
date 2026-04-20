@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db/store";
 import { processIncidentCreated } from "@/lib/db/linked-updates";
-import { todayStr, generateId } from "@/lib/utils";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -26,7 +25,6 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const now = new Date().toISOString();
 
   const incident = db.incidents.create({
     ...body,

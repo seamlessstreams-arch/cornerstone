@@ -13,8 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import {
-  AlertTriangle, ArrowLeft, Calendar, Clock, MapPin, User,
-  CheckCircle2, XCircle, Bell, FileText, Shield, ClipboardCheck,
+  AlertTriangle, ArrowLeft, Clock, MapPin, User,
+  CheckCircle2, Bell, FileText, Shield, ClipboardCheck,
   Loader2, AlertCircle, ChevronRight, Heart, BookOpen,
 } from "lucide-react";
 import { useIncident, useUpdateIncident } from "@/hooks/use-incidents";

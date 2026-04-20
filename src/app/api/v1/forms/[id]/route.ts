@@ -50,7 +50,9 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   const form = db.careForms.findById(id);
   if (!form) return NextResponse.json({ error: "Form not found" }, { status: 404 });
 
-  const { action: _action, id: _id, created_at: _ca, created_by: _cb, ...safeBody } = body;
+  const safeBody = Object.fromEntries(
+    Object.entries(body).filter(([key]) => !["action", "id", "created_at", "created_by"].includes(key))
+  );
   const updated = db.careForms.update(id, {
     ...safeBody,
     updated_by: auth.userId,

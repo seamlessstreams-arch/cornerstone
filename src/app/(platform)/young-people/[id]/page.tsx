@@ -13,16 +13,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import {
-  ArrowLeft, Heart, AlertTriangle, Shield, Pill, Calendar,
+  ArrowLeft, AlertTriangle, Pill,
   GraduationCap, Phone, Mail, User, MapPin, FileText,
-  CheckSquare, BookOpen, Activity, Loader2, AlertCircle,
-  ChevronRight, Clock,
+  CheckSquare, Activity, Loader2, AlertCircle,
+  ChevronRight,
 } from "lucide-react";
 import { useYoungPerson } from "@/hooks/use-young-people";
 import { cn, formatDate, formatRelative } from "@/lib/utils";
 import { getStaffName } from "@/lib/seed-data";
 import { INCIDENT_TYPE_LABELS } from "@/lib/constants";
-import type { Incident, Task, Medication, CareForm, DailyLogEntry } from "@/types";
+import type { Incident, Task, Medication, CareForm } from "@/types";
 
 // ── Severity badge config ─────────────────────────────────────────────────────
 const SEV_BADGE: Record<string, string> = {

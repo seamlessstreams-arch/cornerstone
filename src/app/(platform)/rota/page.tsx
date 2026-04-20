@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import {
-  Calendar, ChevronLeft, ChevronRight, Plus, Clock, Users,
-  Sun, AlertTriangle, UserX, CheckCircle2, Loader2,
+  ChevronLeft, ChevronRight, Plus, Clock,
+  Sun, UserX, CheckCircle2, Loader2,
 } from "lucide-react";
 import { useRota } from "@/hooks/use-rota";
 import { useStaff } from "@/hooks/use-staff";

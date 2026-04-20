@@ -32,9 +32,12 @@ export default function TrainingPage() {
   const trainingQuery = useTraining();
   const staffQuery = useStaff();
 
-  const allRecords = trainingQuery.data?.data ?? [];
+  const allRecords = useMemo(() => trainingQuery.data?.data ?? [], [trainingQuery.data?.data]);
   const meta = trainingQuery.data?.meta;
-  const activeStaff = (staffQuery.data?.data ?? []).filter((s) => s.role !== "responsible_individual");
+  const activeStaff = useMemo(
+    () => (staffQuery.data?.data ?? []).filter((s) => s.role !== "responsible_individual"),
+    [staffQuery.data?.data]
+  );
 
   const courses = useMemo(() => [...new Set(allRecords.map((t) => t.course_name))], [allRecords]);
 

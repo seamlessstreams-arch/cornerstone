@@ -6,7 +6,7 @@
 // ══════════════════════════════════════════════════════════════════════════════
 
 import React, { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
 import { Badge } from "@/components/ui/badge";
@@ -14,10 +14,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar } from "@/components/ui/avatar";
 import {
-  ArrowLeft, FileText, CheckCircle2, Clock, XCircle,
+  ArrowLeft, CheckCircle2, Clock, XCircle,
   AlertTriangle, Archive, Pencil, Save, X, Loader2,
-  AlertCircle, Heart, CalendarDays, User, Tag, ChevronRight,
-  Shield, UserCheck, Send,
+  AlertCircle, Heart, Tag, UserCheck, Send,
 } from "lucide-react";
 import { getStaffName, getYPName } from "@/lib/seed-data";
 import { useForm, useUpdateForm, useSubmitForm, useApproveForm } from "@/hooks/use-forms";
@@ -28,7 +27,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { PERMISSIONS } from "@/lib/permissions";
 import { cn, formatDate, formatRelative } from "@/lib/utils";
 import {
-  CARE_FORM_TYPE_LABELS, CARE_FORM_TYPES, CARE_FORM_STATUSES,
+  CARE_FORM_TYPE_LABELS, CARE_FORM_TYPES,
 } from "@/lib/constants";
 import type { CareForm } from "@/types";
 
@@ -150,7 +149,6 @@ function ApprovePanel({
 
 export default function FormDetailPage() {
   const { formId } = useParams<{ formId: string }>();
-  const router = useRouter();
   const currentUser = useCurrentUser();
   const { can } = usePermissions();
   const [editing, setEditing] = useState(false);

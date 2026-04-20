@@ -5,16 +5,14 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { AriaPanel } from "@/components/aria/aria-panel";
 import {
   ChevronLeft, AlertTriangle, CheckCircle2, Clock, Shield,
   FileCheck, User, Users, Globe, GraduationCap, Briefcase, Heart,
-  ChevronRight, Star, Mail, Phone, Calendar, Sparkles, Activity,
-  FileText, Eye, Flag, Fingerprint, Building2, Zap, Copy,
-  ExternalLink, MoreHorizontal, RefreshCw, ClipboardCheck,
+  ChevronRight, Star, Calendar, Sparkles, Activity,
+  FileText, Flag, Fingerprint, Zap,
+  ExternalLink, ClipboardCheck,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn, formatDate } from "@/lib/utils";
@@ -22,7 +20,7 @@ import {
   useCandidate, useUpdateCheck, useUpdateReference,
   useCreateReference, useUpdateOffer,
 } from "@/hooks/use-recruitment";
-import type { RecruitmentCheck, RecruitmentReference, Interview, Offer, RecruitmentAuditEntry } from "@/hooks/use-recruitment";
+import type { RecruitmentCheck, RecruitmentReference } from "@/hooks/use-recruitment";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

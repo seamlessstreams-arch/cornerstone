@@ -3,17 +3,15 @@
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 import { AriaPanel } from "@/components/aria/aria-panel";
 import {
   UserPlus, Search, Plus, Filter, AlertTriangle, AlertCircle,
   Users, Clock, Zap, TrendingUp, Briefcase, Shield, FileCheck,
-  User, Globe, GraduationCap, Heart, ChevronRight, Eye,
-  BarChart3, Download, CheckCircle2, XCircle,
+  User, Eye,
+  BarChart3, Download, XCircle,
 } from "lucide-react";
 import { cn, formatDate, daysFromNow } from "@/lib/utils";
 import { useRecruitment, useCreateCandidate } from "@/hooks/use-recruitment";

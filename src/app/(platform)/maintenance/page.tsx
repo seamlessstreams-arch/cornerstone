@@ -6,14 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Wrench, Plus, AlertTriangle, CheckCircle2, Clock, Calendar,
+  Wrench, Plus, AlertTriangle, CheckCircle2, Calendar,
   Flame, Zap, Droplets, Shield, X,
 } from "lucide-react";
 import { cn, formatDate, daysFromNow } from "@/lib/utils";
 import { useMaintenance, useCreateMaintenanceItem, useUpdateMaintenanceItem } from "@/hooks/use-maintenance";
 import type { MaintenanceItem } from "@/types/extended";
-
-type MaintenanceStatus = "open" | "scheduled" | "completed";
 type MaintenancePriority = "urgent" | "high" | "medium" | "low";
 type MaintenanceCategory = "hvac" | "fire_safety" | "plumbing" | "security" | "electrical" | "cleaning" | "general";
 

@@ -2,25 +2,28 @@
 
 import React, { useState, useMemo } from "react";
 import { PageShell } from "@/components/layout/page-shell";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AriaPanel } from "@/components/aria/aria-panel";
 import {
-  AlertTriangle, Shield, Eye, CheckCircle2, Clock, FileText,
-  Plus, Users, MapPin, Calendar, Phone, Bell, TrendingUp,
-  ArrowUpRight, Loader2, X, ChevronRight, UserCheck, Sparkles,
-  Link2, BookOpen, Activity,
+  AlertTriangle, Shield, CheckCircle2, Clock,
+  Plus, Users, Bell, TrendingUp,
+  Loader2, X, UserCheck, Sparkles,
+  Link2, BookOpen,
 } from "lucide-react";
 import { useIncidents, useAddOversight } from "@/hooks/use-incidents";
 import { useYoungPeople } from "@/hooks/use-young-people";
 import { api } from "@/hooks/use-api";
 import { getStaffName, getYPName, getYPById } from "@/lib/seed-data";
 import { INCIDENT_TYPE_LABELS } from "@/lib/constants";
-import { cn, formatDate, formatRelative } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import type { Incident } from "@/types";
 import type { MissingEpisode, ChronologyEntry, ChronologyCategory } from "@/types/extended";
+
+const SAFEGUARDING_TYPES = [
+  "safeguarding_concern", "exploitation_concern", "self_harm",
+  "missing_from_care", "contextual_safeguarding", "allegation",
+];
 
 // ── Static seed data (display only) ──────────────────────────────────────────
 
@@ -164,13 +167,8 @@ function SafeguardingConcernsTab() {
 
   const query = useIncidents({ status: "open" });
   const ypQuery = useYoungPeople();
-  const allYP = ypQuery.data?.data ?? [];
-  const allOpen: Incident[] = query.data?.data ?? [];
-
-  const SAFEGUARDING_TYPES = [
-    "safeguarding_concern", "exploitation_concern", "self_harm",
-    "missing_from_care", "contextual_safeguarding", "allegation",
-  ];
+  const allYP = useMemo(() => ypQuery.data?.data ?? [], [ypQuery.data?.data]);
+  const allOpen = useMemo<Incident[]>(() => query.data?.data ?? [], [query.data?.data]);
 
   const concerns = useMemo(() => {
     let list = allOpen.filter((i) => SAFEGUARDING_TYPES.includes(i.type));
@@ -815,7 +813,7 @@ function ChronologyTab() {
       <div className="relative">
         <div className="absolute left-5 top-0 bottom-0 w-px bg-slate-200" />
         <div className="space-y-4">
-          {entries.map((entry, i) => {
+          {entries.map((entry) => {
             const cat = CHRONO_CATEGORY_CONFIG[entry.category] ?? CHRONO_CATEGORY_CONFIG.other;
             const sig = SIGNIFICANCE_CONFIG[entry.significance];
 

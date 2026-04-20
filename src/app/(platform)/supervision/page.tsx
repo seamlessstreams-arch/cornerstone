@@ -11,9 +11,8 @@ import { Input } from "@/components/ui/input";
 import {
   MessageSquare, Plus, CheckCircle2, AlertTriangle, Clock,
   Calendar, Target, Award, Smile, Meh, Frown, UserCheck,
-  ClipboardList, Filter, X, Loader2,
+  ClipboardList, X, Loader2,
 } from "lucide-react";
-import { getStaffName } from "@/lib/seed-data";
 import { useStaff } from "@/hooks/use-staff";
 import { cn, formatDate, daysFromNow, todayStr } from "@/lib/utils";
 import { useSupervisions, useCreateSupervision } from "@/hooks/use-supervision";
@@ -292,11 +291,20 @@ export default function SupervisionPage() {
   const [scheduleOpen, setScheduleOpen] = useState(false);
 
   const staffQuery = useStaff();
-  const allActiveStaff = (staffQuery.data?.data ?? []).filter((s) => s.is_active);
-  const activeNonRI = allActiveStaff.filter((s) => s.role !== "responsible_individual");
+  const allActiveStaff = useMemo(
+    () => (staffQuery.data?.data ?? []).filter((s) => s.is_active),
+    [staffQuery.data?.data]
+  );
+  const activeNonRI = useMemo(
+    () => allActiveStaff.filter((s) => s.role !== "responsible_individual"),
+    [allActiveStaff]
+  );
 
   const supervisionsQuery = useSupervisions();
-  const supervisionRecords: Supervision[] = supervisionsQuery.data?.data ?? [];
+  const supervisionRecords: Supervision[] = useMemo(
+    () => supervisionsQuery.data?.data ?? [],
+    [supervisionsQuery.data?.data]
+  );
 
   const stats = useMemo(() => {
     const today = todayStr();

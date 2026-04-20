@@ -36,6 +36,7 @@ const sizes = {
 export function Avatar({ name, src, size = "md", className }: AvatarProps) {
   if (src) {
     return (
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={src}
         alt={name}

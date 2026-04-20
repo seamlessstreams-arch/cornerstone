@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db/store";
-import { todayStr } from "@/lib/utils";
 
 function calcAge(dob: string): number {
   const today = new Date();
@@ -29,7 +28,6 @@ export async function GET(req: NextRequest) {
   const allTasks = db.tasks.findAll();
   const allMissingEpisodes = db.missingEpisodes.findAll();
   const allDailyLog = db.dailyLog.findAll();
-  const today = todayStr();
 
   const data = filtered.map((yp) => {
     const keyWorker = yp.key_worker_id ? (allStaff.find((s) => s.id === yp.key_worker_id) ?? null) : null;

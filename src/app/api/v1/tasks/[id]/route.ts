@@ -90,7 +90,9 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   const idx = tasks.findIndex((t) => t.id === id);
   if (idx !== -1) {
     // Strip action field and protected audit fields before merging
-    const { action: _action, id: _id, created_at: _ca, created_by: _cb, ...safeBody } = body;
+    const safeBody = Object.fromEntries(
+      Object.entries(body).filter(([key]) => !["action", "id", "created_at", "created_by"].includes(key))
+    );
     tasks[idx] = {
       ...tasks[idx],
       ...safeBody,

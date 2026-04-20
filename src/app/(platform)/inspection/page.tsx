@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
-  Award, Calendar, CheckCircle2, AlertTriangle, FileText,
-  Star, Clock, Download, TrendingUp, Shield,
+  Award, FileText,
+  Download, TrendingUp,
 } from "lucide-react";
 import { HOME } from "@/lib/seed-data";
 import { useHealthCheck } from "@/hooks/use-dashboard";

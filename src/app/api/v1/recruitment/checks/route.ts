@@ -48,7 +48,7 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json();
   const { id, candidate_id, status, verified_by, verified_at, received_date,
     requested_date, certificate_number, document_type, expiry_date,
-    concern_flag, concern_notes, override_reason, risk_mitigation, notes, owner } = body;
+    concern_flag, concern_notes, override_reason, owner } = body;
 
   if (!id) {
     return NextResponse.json({ error: "Check id is required" }, { status: 400 });

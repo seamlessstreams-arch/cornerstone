@@ -37,7 +37,7 @@ function highestRisk(risks: string[]): string {
   }, "low");
 }
 
-export async function GET(_req: NextRequest) {
+export async function GET() {
   const allMissing = db.missingEpisodes.findAll();
   const allIncidents = db.incidents.findAll();
   const allYP = db.youngPeople.findAll();

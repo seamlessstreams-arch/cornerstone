@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db/store";
 import { processBuildingCheckFail } from "@/lib/db/linked-updates";
 
-export async function GET(_req: NextRequest) {
+export async function GET() {
   const buildings = db.buildings.findAll();
   const allChecks = db.buildingChecks.findAll();
   const dueChecks = db.buildingChecks.findDue();

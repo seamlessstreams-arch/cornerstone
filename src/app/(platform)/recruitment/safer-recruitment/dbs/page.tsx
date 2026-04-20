@@ -5,7 +5,7 @@ import { PageShell } from "@/components/layout/page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Fingerprint, AlertTriangle, CheckCircle2, Clock, AlertCircle,
+  Fingerprint, CheckCircle2, Clock, AlertCircle,
   Loader2, Info, ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -104,7 +104,7 @@ function CandidateDBSRow({ candidate, dbsCheck }: CandidateDBSRowProps) {
 export default function DBSTrackerPage() {
   const { data, isLoading, isError, error } = useRecruitment();
 
-  const { candidatesWithDBS, stats } = useMemo(() => {
+  const { stats } = useMemo(() => {
     const candidates = data?.candidates ?? [];
     const withDBS = candidates
       .map((c: CandidateDetail) => ({
@@ -112,11 +112,6 @@ export default function DBSTrackerPage() {
         dbsCheck: c.checks.find(ch => ch.check_type === "enhanced_dbs") ?? null,
       }))
       .filter(item => item.dbsCheck !== null) as { candidate: CandidateDetail; dbsCheck: RecruitmentCheck }[];
-
-    const activeStatuses = ["appointed", "unsuccessful", "withdrawn"];
-    const activeCandidates = withDBS.filter(
-      item => !activeStatuses.includes(item.candidate.stage)
-    );
 
     const st = {
       verified: withDBS.filter(i => i.dbsCheck.status === "verified").length,
@@ -128,7 +123,7 @@ export default function DBSTrackerPage() {
       concern_flags: withDBS.filter(i => i.dbsCheck.concern_flag).length,
     };
 
-    return { candidatesWithDBS: activeCandidates, stats: st };
+    return { stats: st };
   }, [data]);
 
   const allCandidates = data?.candidates ?? [];

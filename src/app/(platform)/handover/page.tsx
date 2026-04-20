@@ -8,13 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import {
-  ArrowRightLeft, Plus, ChevronDown, ChevronRight, Clock, Users,
+  ArrowRightLeft, Plus, ChevronDown, ChevronRight, Users,
   AlertTriangle, CheckCircle2, Loader2, AlertCircle, X, Pill,
   ClipboardList, Smile, Meh, Frown, Flag,
 } from "lucide-react";
 import { getStaffName, getYPName } from "@/lib/seed-data";
 import type { YoungPerson } from "@/types";
-import { cn, formatDate, formatDateTime, todayStr } from "@/lib/utils";
+import { cn, formatDate, todayStr } from "@/lib/utils";
 import { useHandover, useCreateHandover } from "@/hooks/use-handover";
 import type { HandoverEntry, HandoverChildUpdate } from "@/types/extended";
 

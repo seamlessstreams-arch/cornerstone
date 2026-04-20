@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   BookOpen, Plus, Heart, Activity, Star, Smile, Meh, Frown,
-  Moon, Sun, Utensils, ChevronDown, Loader2, AlertCircle, X,
+  Moon, Utensils, Loader2, AlertCircle, X,
 } from "lucide-react";
 import { getStaffName, getYPName } from "@/lib/seed-data";
 import { cn, formatDate } from "@/lib/utils";

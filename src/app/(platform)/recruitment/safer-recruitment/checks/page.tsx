@@ -4,13 +4,12 @@ import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Shield, CheckCircle2, AlertTriangle, Clock, Download,
+  Shield, AlertTriangle, Download,
   Fingerprint, FileCheck, User, Users, Globe, GraduationCap,
-  Briefcase, Heart, ExternalLink, FileText, ClipboardCheck,
-  LayoutGrid, List, Filter, ChevronDown,
+  Briefcase, Heart, FileText, ClipboardCheck,
+  LayoutGrid, List,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRecruitment } from "@/hooks/use-recruitment";
@@ -80,7 +79,7 @@ type ViewMode = "grid" | "list";
 export default function ChecksPage() {
   const { data, isLoading, error } = useRecruitment();
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
-  const [stageFilter, setStageFilter] = useState("all");
+  const [stageFilter] = useState("all");
   const [selectedCheckType, setSelectedCheckType] = useState<CheckTypeId | "all">("all");
 
   const candidates = useMemo<CandidateDetail[]>(() => {

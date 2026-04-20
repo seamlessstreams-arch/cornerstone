@@ -4,7 +4,6 @@
 // ══════════════════════════════════════════════════════════════════════════════
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useCurrentUser } from "@/hooks/use-auth";
 import type { CareForm } from "@/types";
 
 const API = "/api/v1/forms";

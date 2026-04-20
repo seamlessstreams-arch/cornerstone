@@ -5,10 +5,9 @@
 
 import type {
   StaffMember, YoungPerson, Task, Incident, Shift, LeaveRequest,
-  TrainingRecord, Supervision, Medication, MedicationAdministration,
-  DailyLogEntry, Expense, Candidate, Document, Home,
+  TrainingRecord, Medication, DailyLogEntry, Home,
 } from "@/types";
-import { daysFromNow, todayStr, generateId } from "./utils";
+import { daysFromNow, todayStr } from "./utils";
 
 const today = todayStr();
 const yesterday = daysFromNow(-1);

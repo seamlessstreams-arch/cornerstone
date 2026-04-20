@@ -2,7 +2,6 @@
 
 import React, { useMemo, useState } from "react";
 import { PageShell } from "@/components/layout/page-shell";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
@@ -11,12 +10,12 @@ import { useMedication, useAdminister } from "@/hooks/use-medication";
 import { getYPName, getStaffName } from "@/lib/seed-data";
 import { useStaff } from "@/hooks/use-staff";
 import { useYoungPeople } from "@/hooks/use-young-people";
-import { cn, formatDate, formatDateTime, todayStr, daysFromNow } from "@/lib/utils";
+import { cn, formatDate, todayStr, daysFromNow } from "@/lib/utils";
 import type { Medication, MedicationAdministration } from "@/types";
 import {
   Pill, Plus, AlertTriangle, CheckCircle2, Clock, Package,
-  Shield, FileText, Calendar, TriangleAlert, X, ChevronDown,
-  ChevronUp, Sparkles, Eye, ClipboardList, TrendingUp, Filter,
+  Shield, FileText, Calendar, X,
+  Sparkles, Eye, ClipboardList, Filter,
   Info, RefreshCw, Activity,
 } from "lucide-react";
 
@@ -318,8 +317,6 @@ function MARCell({ admin, isScheduled, dateStr }: MARCellProps) {
     return <div className="h-8 w-8 rounded-full bg-slate-100 border border-slate-200 mx-auto" />;
   }
 
-  const cfg = (STATUS_CONFIG as unknown as Record<string, typeof STATUS_CONFIG.given>)[admin.status] ?? STATUS_CONFIG.missed;
-
   return (
     <div
       className="relative flex items-center justify-center cursor-pointer"
@@ -384,14 +381,12 @@ function TodayScheduleTab({
   exceptions,
   stockAlerts,
   meta,
-  mar,
 }: {
   medications: Medication[];
   todaySchedule: MedicationAdministration[];
   exceptions: MedicationAdministration[];
   stockAlerts: Medication[];
   meta: Record<string, number>;
-  mar: { medication: Medication; administrations: MedicationAdministration[] }[];
 }) {
   const [openForms, setOpenForms] = useState<Set<string>>(new Set());
   const [ariaFor, setAriaFor] = useState<string | null>(null);
@@ -434,7 +429,11 @@ function TodayScheduleTab({
   const toggleForm = (id: string) => {
     setOpenForms((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+        if (next.has(id)) {
+          next.delete(id);
+        } else {
+          next.add(id);
+        }
       return next;
     });
   };
@@ -784,7 +783,6 @@ function MARChartTab({
                         const dayAdmins = administrations.filter((a) => a.scheduled_time.startsWith(d));
                         const admin = dayAdmins[0];
                         const isScheduledToday = d >= today && !admin;
-                        const isFutureDay = d > today;
 
                         return (
                           <td key={d} className={cn("px-2 py-3 text-center", d === today && "bg-blue-50/30")}>
@@ -1025,11 +1023,9 @@ function PRNLogTab({
 
 function StockOversightTab({
   medications,
-  exceptions,
   mar,
 }: {
   medications: Medication[];
-  exceptions: MedicationAdministration[];
   mar: { medication: Medication; administrations: MedicationAdministration[] }[];
 }) {
   const [showAria, setShowAria] = useState(false);
@@ -1422,13 +1418,12 @@ export default function MedicationPage() {
                 exceptions={exceptions}
                 stockAlerts={stockAlerts}
                 meta={meta}
-                mar={mar}
               />
             )}
             {activeTab === "mar" && <MARChartTab mar={mar} />}
             {activeTab === "prn" && <PRNLogTab medications={medications} mar={mar} />}
             {activeTab === "stock" && (
-              <StockOversightTab medications={medications} exceptions={exceptions} mar={mar} />
+              <StockOversightTab medications={medications} mar={mar} />
             )}
           </>
         )}

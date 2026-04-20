@@ -25,7 +25,7 @@ import {
 import { useCurrentUser } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
 import { PERMISSIONS } from "@/lib/permissions";
-import { cn, todayStr, formatRelative, isOverdue, isDueToday, formatDate } from "@/lib/utils";
+import { cn, formatRelative, isOverdue, isDueToday, formatDate } from "@/lib/utils";
 import { TASK_CATEGORY_LABELS, TASK_PRIORITIES, TASK_CATEGORIES, TASK_STATUSES } from "@/lib/constants";
 import type { Task } from "@/types";
 

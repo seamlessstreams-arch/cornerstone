@@ -14,8 +14,6 @@ import { cn, formatDate, daysFromNow, todayStr } from "@/lib/utils";
 import { useAudits, useCreateAudit, useUpdateAudit } from "@/hooks/use-audits";
 import type { Audit } from "@/types/extended";
 
-type AuditStatus = "completed" | "scheduled" | "in_progress";
-
 const AUDIT_CATEGORIES = [
   { value: "medication", label: "Medication" },
   { value: "health_safety", label: "Health & Safety" },

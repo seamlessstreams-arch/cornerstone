@@ -73,25 +73,23 @@ export default function ReportsPage() {
     leaveQuery.isPending;
 
   // Tasks derived stats
-  const allTasks = allTasksQuery.data?.data ?? [];
+  const allTasks = useMemo(() => allTasksQuery.data?.data ?? [], [allTasksQuery.data?.data]);
   const activeTasks = useMemo(() => allTasks.filter((t) => t.status !== "completed" && t.status !== "cancelled"), [allTasks]);
   const completedTasks = useMemo(() => allTasks.filter((t) => t.status === "completed"), [allTasks]);
   const overdueTasks = useMemo(() => activeTasks.filter((t) => t.due_date && t.due_date < today), [activeTasks, today]);
   const taskCompletionRate = allTasks.length > 0 ? Math.round((completedTasks.length / allTasks.length) * 100) : 0;
 
   // Incidents derived stats
-  const allIncidents = incidentsQuery.data?.data ?? [];
+  const allIncidents = useMemo(() => incidentsQuery.data?.data ?? [], [incidentsQuery.data?.data]);
   const openIncidents = useMemo(() => allIncidents.filter((i) => i.status === "open"), [allIncidents]);
   const closedIncidents = useMemo(() => allIncidents.filter((i) => i.status === "closed"), [allIncidents]);
-  const criticalIncidents = useMemo(() => allIncidents.filter((i) => i.severity === "critical"), [allIncidents]);
 
   // Training derived stats
   const trainingMeta = trainingQuery.data?.meta;
-  const allTraining = trainingQuery.data?.data ?? [];
   const trainingCompliancePct = trainingMeta?.rate ?? 0;
 
   // Staff derived stats
-  const allStaff = staffQuery.data?.data ?? [];
+  const allStaff = useMemo(() => staffQuery.data?.data ?? [], [staffQuery.data?.data]);
   const activeStaff = useMemo(() => allStaff.filter((s) => s.is_active && s.role !== "responsible_individual"), [allStaff]);
 
   // YP stats
@@ -99,7 +97,6 @@ export default function ReportsPage() {
 
   // Leave derived stats
   const leaveMeta = leaveQuery.data?.meta;
-  const allLeave = leaveQuery.data?.data ?? [];
 
   const tabs: { id: ReportView; label: string; icon: React.ElementType }[] = [
     { id: "overview", label: "Overview", icon: BarChart3 },

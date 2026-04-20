@@ -11,11 +11,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/hooks/use-api";
 import { cn, formatRelative, isOverdue } from "@/lib/utils";
 import type { Task, Shift, YoungPerson } from "@/types";
-import type { BuildingCheck, Vehicle, HandoverEntry } from "@/types/extended";
+import type { BuildingCheck, Vehicle } from "@/types/extended";
 import {
   CheckCircle2, Clock, AlertTriangle, BookOpen, Pill, Car, Building2,
-  Bell, ChevronRight, Circle, CalendarDays, Users, ArrowRightLeft,
-  Sparkles, Target, Heart, Home, Zap, CheckCheck, User, Shield,
+  Bell, ChevronRight, CalendarDays, Users, ArrowRightLeft,
+  Sparkles, Heart, CheckCheck, Shield,
   AlarmClock, Clipboard, FileText, BadgeAlert, Info,
 } from "lucide-react";
 

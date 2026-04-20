@@ -169,8 +169,11 @@ export default function LeavePage() {
   const staffQuery = useStaff();
 
   const isLoading = leaveQuery.isPending || staffQuery.isPending;
-  const apiLeave = leaveQuery.data?.data ?? [];
-  const activeStaff = (staffQuery.data?.data ?? []).filter((s) => s.is_active && s.role !== "responsible_individual");
+  const apiLeave = useMemo(() => leaveQuery.data?.data ?? [], [leaveQuery.data?.data]);
+  const activeStaff = useMemo(
+    () => (staffQuery.data?.data ?? []).filter((s) => s.is_active && s.role !== "responsible_individual"),
+    [staffQuery.data?.data]
+  );
 
   // Apply local overrides on top of API data
   const leaveRequests = useMemo<LeaveRequest[]>(() => {

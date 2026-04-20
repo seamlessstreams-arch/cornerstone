@@ -16,7 +16,7 @@ import {
 import { getStaffName, getYPName } from "@/lib/seed-data";
 import { useTasks } from "@/hooks/use-tasks";
 import { useStaff } from "@/hooks/use-staff";
-import { cn, todayStr, formatRelative, isOverdue, isDueToday } from "@/lib/utils";
+import { cn, formatRelative, isOverdue, isDueToday } from "@/lib/utils";
 import { TASK_CATEGORY_LABELS, TASK_PRIORITIES } from "@/lib/constants";
 import type { Task } from "@/types";
 
@@ -52,11 +52,10 @@ export default function TasksPage() {
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [showCompleted, setShowCompleted] = useState(false);
-  const today = todayStr();
 
   const tasksQuery = useTasks();
   const staffQuery = useStaff();
-  const allTasks: Task[] = tasksQuery.data?.data ?? [];
+  const allTasks: Task[] = useMemo(() => tasksQuery.data?.data ?? [], [tasksQuery.data?.data]);
 
   const filtered = useMemo(() => {
     let list = allTasks;
@@ -87,7 +86,10 @@ export default function TasksPage() {
     setSearch(""); setFilterPerson(null); setFilterPriority(null); setFilterCategory(null);
   };
   const hasFilters = search || filterPerson || filterPriority || filterCategory;
-  const activeStaff = (staffQuery.data?.data ?? []).filter((s) => s.is_active && s.role !== "responsible_individual");
+  const activeStaff = useMemo(
+    () => (staffQuery.data?.data ?? []).filter((s) => s.is_active && s.role !== "responsible_individual"),
+    [staffQuery.data?.data]
+  );
 
   return (
     <PageShell

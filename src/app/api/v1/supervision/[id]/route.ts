@@ -31,7 +31,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   // General update — strip protected audit fields
-  const { id: _id, created_at: _c, created_by: _cb, ...safe } = rest;
+  const safe = Object.fromEntries(
+    Object.entries(rest).filter(([key]) => !["id", "created_at", "created_by"].includes(key))
+  );
   const updated = db.supervisions.update(id, { ...safe, updated_by: auth.userId });
   return NextResponse.json({ data: updated });
 }
