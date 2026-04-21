@@ -12,9 +12,11 @@ import {
 import { cn } from "@/lib/utils";
 import {
   useRecruitment,
+  useUpdateOffer,
   type Offer,
   type CandidateDetail,
 } from "@/hooks/use-recruitment";
+import { useToast } from "@/components/ui/toast";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -133,11 +135,19 @@ function ClearancePanel({ candidate, offer, onClose }: ClearancePanelProps) {
     Object.fromEntries(CLEARANCE_ITEMS.map(i => [i.key, false]))
   );
   const [localCleared, setLocalCleared] = useState(offer.final_clearance_given);
+  const updateOffer = useUpdateOffer();
+  const { toast } = useToast();
 
   const allChecked = Object.values(checked).every(Boolean);
 
-  function handleGrantClearance() {
-    setLocalCleared(true);
+  async function handleGrantClearance() {
+    try {
+      await updateOffer.mutateAsync({ candidateId: candidate.id, action: "grant_clearance", by: "current_user" });
+      setLocalCleared(true);
+      toast("Final clearance granted successfully.", "success");
+    } catch {
+      toast("Failed to grant clearance. Please try again.", "error");
+    }
   }
 
   return (
@@ -211,15 +221,17 @@ function ClearancePanel({ candidate, offer, onClose }: ClearancePanelProps) {
         )}
         <Button
           size="sm"
-          disabled={!allChecked || localCleared}
+          disabled={!allChecked || localCleared || updateOffer.isPending}
           onClick={handleGrantClearance}
           className={cn("w-full", allChecked && !localCleared ? "bg-emerald-600 hover:bg-emerald-700" : "opacity-60")}
         >
-          {localCleared
-            ? "Final Clearance Given"
-            : allChecked
-              ? "Grant Final Clearance"
-              : `Complete checklist (${Object.values(checked).filter(Boolean).length}/${CLEARANCE_ITEMS.length})`}
+          {updateOffer.isPending
+            ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />Saving…</>
+            : localCleared
+              ? "Final Clearance Given"
+              : allChecked
+                ? "Grant Final Clearance"
+                : `Complete checklist (${Object.values(checked).filter(Boolean).length}/${CLEARANCE_ITEMS.length})`}
         </Button>
       </div>
     </div>

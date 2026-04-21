@@ -1,8 +1,9 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./use-api";
 import type { YoungPerson, StaffMember } from "@/types";
+import type { ChronologyEntry } from "@/types/extended";
 
 export interface YPEnriched extends YoungPerson {
   age: number;
@@ -50,5 +51,31 @@ export function useYoungPeople(status = "current") {
       api.get<{ data: YPEnriched[]; meta: Record<string, number> }>(
         `/young-people?status=${status}`
       ),
+  });
+}
+
+export function useCreateChronologyEntry(childId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      category: string;
+      significance: "routine" | "significant" | "critical";
+      title: string;
+      description?: string;
+    }) => api.post<{ data: ChronologyEntry }>("/safeguarding", { ...payload, child_id: childId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["young-people", childId] });
+    },
+  });
+}
+
+export function useCreateMissingEpisode(childId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: Record<string, unknown>) =>
+      api.post<{ data: Record<string, unknown> }>(`/young-people/${childId}/missing-episodes`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["young-people", childId] });
+    },
   });
 }

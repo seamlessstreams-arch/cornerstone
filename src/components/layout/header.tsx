@@ -6,6 +6,7 @@ import { Bell, Search, Sparkles, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { AriaPanel } from "@/components/aria/aria-panel";
+import { AcaciaLogo } from "@/components/branding/acacia-logo";
 
 interface HeaderProps {
   title: string;
@@ -29,10 +30,13 @@ export function Header({ title, subtitle, actions }: HeaderProps) {
     <>
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
       <div className="flex items-center justify-between gap-4 px-6 py-3">
-        {/* Left: Title */}
-        <div className="min-w-0">
-          <h1 className="text-lg font-bold text-slate-900 truncate">{title}</h1>
-          <p className="text-xs text-slate-500">{subtitle || todayStr}</p>
+        {/* Left: Brand and title */}
+        <div className="flex min-w-0 items-center gap-3">
+          <AcaciaLogo showText={false} size={30} className="shrink-0" />
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-bold text-slate-900">{title}</h1>
+            <p className="text-xs text-slate-500">{subtitle || todayStr}</p>
+          </div>
         </div>
 
         {/* Right: Actions */}

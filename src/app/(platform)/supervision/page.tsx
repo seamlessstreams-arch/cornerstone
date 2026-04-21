@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -122,11 +123,11 @@ function SupervisionCard({ sup }: { sup: Supervision }) {
       )}
 
       <div className="flex items-center gap-2">
-        {sup.status === "scheduled" ? (
-          <Button size="sm" className="h-7 text-xs flex-1" disabled title="Begin the supervision and record notes in the physical file or supervision form.">Start Supervision</Button>
-        ) : (
-          <Button size="sm" variant="outline" className="h-7 text-xs flex-1" disabled title="Full supervision records are stored in the Documents section.">View Record</Button>
-        )}
+        <Link href={`/supervision/${sup.id}`} className="flex-1">
+          <Button size="sm" className="h-7 text-xs w-full" variant={sup.status === "scheduled" ? "default" : "outline"}>
+            {sup.status === "scheduled" ? "View & Complete" : "View Record"}
+          </Button>
+        </Link>
         {sup.status === "completed" && (
           <div className="flex items-center gap-1 text-[10px] text-slate-400">
             {sup.staff_signature && sup.supervisor_signature ? (
@@ -289,6 +290,7 @@ function ScheduleModal({ onClose }: { onClose: () => void }) {
 export default function SupervisionPage() {
   const [tab, setTab] = useState<Tab>("supervision");
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [probationPassed, setProbationPassed] = useState<Record<string, boolean>>({});
 
   const staffQuery = useStaff();
   const allActiveStaff = useMemo(
@@ -477,6 +479,8 @@ export default function SupervisionPage() {
             {PROBATION.map((prob) => {
               const staff = allActiveStaff.find((s) => s.id === prob.staffId);
               const nowTime = new Date().getTime();
+              const isPassed = probationPassed[prob.staffId] || prob.status === "passed";
+              const effectiveStatus = isPassed ? "passed" : prob.status;
               const daysLeft = prob.endDate ? Math.max(0, Math.ceil((new Date(prob.endDate).getTime() - nowTime) / 86400000)) : 0;
               const totalDays = Math.ceil((new Date(prob.endDate || "").getTime() - new Date(prob.startDate).getTime()) / 86400000);
               const elapsed = totalDays - daysLeft;
@@ -490,10 +494,10 @@ export default function SupervisionPage() {
                       <div className="flex-1 space-y-3">
                         <div className="flex items-center gap-3 flex-wrap">
                           <span className="text-base font-semibold text-slate-900">{staff?.full_name}</span>
-                          <Badge className={cn("text-[10px] rounded-full", prob.status === "active" ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700")}>
-                            {prob.status === "active" ? "On Probation" : "Passed"}
+                          <Badge className={cn("text-[10px] rounded-full", effectiveStatus === "active" ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700")}>
+                            {effectiveStatus === "active" ? "On Probation" : "Passed"}
                           </Badge>
-                          {prob.status === "active" && daysLeft < 30 && (
+                          {effectiveStatus === "active" && daysLeft < 30 && (
                             <Badge className="text-[10px] rounded-full bg-amber-100 text-amber-700">{daysLeft}d remaining</Badge>
                           )}
                         </div>
@@ -503,7 +507,7 @@ export default function SupervisionPage() {
                             <div className="font-medium text-slate-900">{formatDate(prob.startDate)}</div>
                           </div>
                           <div>
-                            <div className="text-[10px] text-slate-400 mb-0.5">{prob.status === "passed" ? "Completed" : "Due to end"}</div>
+                            <div className="text-[10px] text-slate-400 mb-0.5">{effectiveStatus === "passed" ? "Completed" : "Due to end"}</div>
                             <div className="font-medium text-slate-900">{formatDate(prob.endDate || "")}</div>
                           </div>
                           <div>
@@ -511,7 +515,7 @@ export default function SupervisionPage() {
                             <div className="font-medium text-slate-900">{prob.reviews}</div>
                           </div>
                         </div>
-                        {prob.status === "active" && (
+                        {effectiveStatus === "active" && (
                           <div>
                             <div className="flex justify-between text-xs mb-1.5">
                               <span className="text-slate-500">Probation progress</span>
@@ -537,10 +541,18 @@ export default function SupervisionPage() {
                           </div>
                         )}
                         <div className="flex gap-2">
-                          <Button size="sm" variant="outline" className="h-8 text-xs" disabled title="Probation history is stored in the staff member's HR file.">View history</Button>
-                          {prob.status === "active" && <Button size="sm" className="h-8 text-xs" disabled title="Schedule probation reviews through your HR system.">Schedule review</Button>}
-                          {prob.status === "active" && daysLeft === 0 && (
-                            <Button size="sm" className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700" disabled title="Probation sign-off must be recorded in the staff HR file and confirmed with your RI.">Confirm passed</Button>
+                          <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setTab("supervision")}>View sessions</Button>
+                          {effectiveStatus === "active" && (
+                            <Button
+                              size="sm"
+                              className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700"
+                              onClick={() => setProbationPassed((p) => ({ ...p, [prob.staffId]: true }))}
+                            >
+                              Confirm passed
+                            </Button>
+                          )}
+                          {effectiveStatus === "passed" && (
+                            <span className="text-xs text-emerald-700 font-medium flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" /> Probation passed</span>
                           )}
                         </div>
                       </div>
@@ -598,9 +610,9 @@ export default function SupervisionPage() {
                     )}
                   </div>
                   <div className="flex gap-2 shrink-0">
-                    {isOverdue && <Button size="sm" className="h-8 text-xs bg-red-600 hover:bg-red-700" disabled title="Book the appraisal and record it in the Documents section when complete.">Start Appraisal</Button>}
-                    {isDueSoon && !isOverdue && <Button size="sm" className="h-8 text-xs" disabled title="Schedule this appraisal through your HR system.">Schedule</Button>}
-                    {!isDueSoon && !isOverdue && <Button size="sm" variant="outline" className="h-8 text-xs" disabled title="Appraisal records are stored in the Documents section.">View</Button>}
+                    {isOverdue && <Button size="sm" className="h-8 text-xs bg-red-600 hover:bg-red-700" onClick={() => setScheduleOpen(true)}>Start Appraisal</Button>}
+                    {isDueSoon && !isOverdue && <Button size="sm" className="h-8 text-xs" onClick={() => setScheduleOpen(true)}>Schedule</Button>}
+                    {!isDueSoon && !isOverdue && <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setTab("supervision")}>View</Button>}
                   </div>
                 </div>
               );

@@ -149,12 +149,32 @@ export default function AuditLogPage() {
 
   const candidates = data?.candidates ?? [];
 
+  function handleExportBundle() {
+    const rows = [
+      ["Date", "Candidate", "Event Type", "Performed By", "Notes"],
+      ...filtered.map((e) => [
+        new Date(e.performed_at).toLocaleString(),
+        e.candidateName,
+        e.event_type,
+        e.performed_at,
+        "",
+      ]),
+    ];
+    const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `recruitment_audit_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <PageShell
       title="Audit Log"
       subtitle="Complete record of all safer recruitment actions — inspection-ready"
       actions={
-        <Button size="sm" variant="outline" className="gap-1.5" disabled title="Inspection bundles are generated from the Documents section. Contact your system administrator.">
+        <Button size="sm" variant="outline" className="gap-1.5" onClick={handleExportBundle}>
           <Download className="h-3.5 w-3.5" />
           Generate Inspection Bundle
         </Button>

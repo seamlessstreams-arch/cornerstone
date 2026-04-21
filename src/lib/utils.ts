@@ -66,3 +66,7 @@ export function slugify(text: string): string {
 export function pluralise(count: number, singular: string, plural?: string): string {
   return count === 1 ? singular : (plural || singular + "s");
 }
+
+export function formatFiltersAppliedLabel(count: number): string {
+  return `${count} ${pluralise(count, "filter")} applied`;
+}

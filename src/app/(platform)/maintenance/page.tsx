@@ -51,6 +51,9 @@ export default function MaintenancePage() {
 
   const [filter, setFilter] = useState<"all" | "open" | "completed">("all");
   const [showLog, setShowLog] = useState(false);
+  const [editItem, setEditItem] = useState<MaintenanceItem | null>(null);
+  const [editForm, setEditForm] = useState(EMPTY_FORM);
+  const [editError, setEditError] = useState("");
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState("");
 
@@ -64,6 +67,29 @@ export default function MaintenancePage() {
 
   function handleMarkDone(id: string) {
     updateItem.mutate({ id, data: { status: "completed" } });
+  }
+
+  function openEdit(item: MaintenanceItem) {
+    setEditItem(item);
+    setEditForm({
+      title: item.title,
+      category: item.category as MaintenanceCategory,
+      priority: item.priority as MaintenancePriority,
+      due_date: item.due_date,
+      assigned_to: item.assigned_to ?? "",
+      notes: item.notes,
+      recurring: item.recurring,
+    });
+    setEditError("");
+  }
+
+  function handleSaveEdit() {
+    if (!editItem || !editForm.title.trim()) { setEditError("Title is required"); return; }
+    setEditError("");
+    updateItem.mutate(
+      { id: editItem.id, data: { ...editForm, assigned_to: editForm.assigned_to || null } },
+      { onSuccess: () => setEditItem(null) }
+    );
   }
 
   function handleLogIssue() {
@@ -174,8 +200,7 @@ export default function MaintenancePage() {
                             size="sm"
                             variant="outline"
                             className="h-7 text-xs"
-                            disabled
-                            title="Open the issue to edit its details."
+                            onClick={() => openEdit(item)}
                           >
                             Edit
                           </Button>
@@ -313,6 +338,133 @@ export default function MaintenancePage() {
                 <Plus className="h-4 w-4" />Log Issue
               </Button>
               <Button variant="outline" onClick={() => setShowLog(false)}>Cancel</Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Edit Issue Modal */}
+      {editItem && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+          onClick={() => setEditItem(null)}
+        >
+          <div
+            className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-sm font-bold text-slate-900">Edit Maintenance Issue</span>
+              <button onClick={() => setEditItem(null)} className="text-slate-400 hover:text-slate-600">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Title <span className="text-red-500">*</span></label>
+                <Input
+                  value={editForm.title}
+                  onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
+                  placeholder="Describe the issue…"
+                  className="text-sm"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1.5">Category</label>
+                  <select
+                    value={editForm.category}
+                    onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value as MaintenanceCategory }))}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                  >
+                    {CATEGORIES.map((c) => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1.5">Priority</label>
+                  <select
+                    value={editForm.priority}
+                    onChange={(e) => setEditForm((f) => ({ ...f, priority: e.target.value as MaintenancePriority }))}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                  >
+                    <option value="urgent">Urgent</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Status</label>
+                <select
+                  value={editItem.status}
+                  onChange={(e) => setEditItem((prev) => prev ? { ...prev, status: e.target.value as MaintenanceItem["status"] } : prev)}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                >
+                  <option value="open">Open</option>
+                  <option value="scheduled">Scheduled</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1.5">Due Date</label>
+                  <Input
+                    type="date"
+                    value={editForm.due_date}
+                    onChange={(e) => setEditForm((f) => ({ ...f, due_date: e.target.value }))}
+                    className="text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1.5">Assigned To</label>
+                  <Input
+                    value={editForm.assigned_to ?? ""}
+                    onChange={(e) => setEditForm((f) => ({ ...f, assigned_to: e.target.value }))}
+                    placeholder="Contractor or staff"
+                    className="text-sm"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Notes</label>
+                <textarea
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))}
+                  rows={2}
+                  placeholder="Additional details…"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-slate-400 placeholder:text-slate-400"
+                />
+              </div>
+
+              <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={editForm.recurring}
+                  onChange={(e) => setEditForm((f) => ({ ...f, recurring: e.target.checked }))}
+                  className="rounded"
+                />
+                Recurring issue
+              </label>
+
+              {editError && <p className="text-xs text-red-600 font-medium">{editError}</p>}
+            </div>
+
+            <div className="mt-4 flex gap-3">
+              <Button
+                className="flex-1"
+                onClick={handleSaveEdit}
+                disabled={updateItem.isPending}
+              >
+                {updateItem.isPending ? "Saving…" : "Save Changes"}
+              </Button>
+              <Button variant="outline" onClick={() => setEditItem(null)}>Cancel</Button>
             </div>
           </div>
         </div>

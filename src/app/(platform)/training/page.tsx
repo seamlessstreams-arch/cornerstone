@@ -1,260 +1,420 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { PageShell } from "@/components/layout/page-shell";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Avatar } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
 import {
-  GraduationCap, Search, Plus, AlertTriangle, CheckCircle2, Clock,
-  XCircle, Shield, Loader2,
+  AlertTriangle,
+  Bell,
+  Building2,
+  CheckCircle2,
+  Clock,
+  ExternalLink,
+  FileText,
+  Loader2,
+  RefreshCw,
+  Settings,
+  Shield,
+  Users,
 } from "lucide-react";
-import { getStaffName } from "@/lib/seed-data";
-import { useTraining } from "@/hooks/use-training";
-import { useStaff } from "@/hooks/use-staff";
-import { cn, formatDate } from "@/lib/utils";
+import { api } from "@/hooks/use-api";
+import { useTrainingMatrix } from "@/hooks/use-training-matrix";
+import { useOpenTrainingLink } from "@/hooks/use-training-open-link";
+import { useRunTrainingSync, useTrainingSyncStatus } from "@/hooks/use-training-sync";
+import { useSaveTrainingProviderConfig, useTrainingProviderConfig } from "@/hooks/use-training-provider-config";
+import { cn, formatDate, formatFiltersAppliedLabel } from "@/lib/utils";
 
 const STATUS_STYLES: Record<string, { color: string; icon: React.ElementType; label: string }> = {
-  compliant:    { color: "bg-emerald-100 text-emerald-700", icon: CheckCircle2, label: "Compliant"    },
-  expiring_soon:{ color: "bg-amber-100 text-amber-700",    icon: Clock,        label: "Expiring Soon" },
-  expired:      { color: "bg-red-100 text-red-700",         icon: XCircle,      label: "Expired"       },
-  not_started:  { color: "bg-slate-100 text-slate-600",    icon: AlertTriangle, label: "Not Started"  },
+  compliant: { color: "bg-emerald-100 text-emerald-700", icon: CheckCircle2, label: "Compliant" },
+  due_soon: { color: "bg-amber-100 text-amber-700", icon: Clock, label: "Due Soon" },
+  overdue: { color: "bg-orange-100 text-orange-700", icon: AlertTriangle, label: "Overdue" },
+  expired: { color: "bg-red-100 text-red-700", icon: AlertTriangle, label: "Expired" },
+  incomplete: { color: "bg-slate-100 text-slate-600", icon: Clock, label: "Incomplete" },
+  non_compliant: { color: "bg-red-100 text-red-700", icon: AlertTriangle, label: "Non-Compliant" },
 };
 
 export default function TrainingPage() {
   const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string | null>(null);
-  const [view, setView] = useState<"matrix" | "list">("matrix");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [providerFilter, setProviderFilter] = useState("");
+  const [requirementFilter, setRequirementFilter] = useState<"mandatory" | "optional" | "">("");
+  const [view, setView] = useState<"my" | "home" | "organisation">("my");
+  const [showAdmin, setShowAdmin] = useState(false);
 
-  const trainingQuery = useTraining();
-  const staffQuery = useStaff();
+  const matrixQuery = useTrainingMatrix({
+    view,
+    compliance: statusFilter || undefined,
+    provider: providerFilter || undefined,
+    requirement_type: requirementFilter || undefined,
+  });
+  const syncStatusQuery = useTrainingSyncStatus();
+  const runSyncMutation = useRunTrainingSync();
+  const openTrainingMutation = useOpenTrainingLink();
+  const providerConfigQuery = useTrainingProviderConfig();
+  const saveProviderConfigMutation = useSaveTrainingProviderConfig();
 
-  const allRecords = useMemo(() => trainingQuery.data?.data ?? [], [trainingQuery.data?.data]);
-  const meta = trainingQuery.data?.meta;
-  const activeStaff = useMemo(
-    () => (staffQuery.data?.data ?? []).filter((s) => s.role !== "responsible_individual"),
-    [staffQuery.data?.data]
+  const notificationsQuery = useQuery({
+    queryKey: ["training-notifications"],
+    queryFn: () =>
+      api.get<{ notifications: Array<{ id: string; title: string; message: string; created_at: string }> }>(
+        "/training/notifications"
+      ),
+  });
+
+  const rows = matrixQuery.data?.rows ?? [];
+  const summary = matrixQuery.data?.summary;
+
+  const providers = useMemo(
+    () =>
+      [...new Set(rows.map((row) => row.training_courses?.provider_name).filter((value): value is string => Boolean(value)))].sort(),
+    [rows]
   );
 
-  const courses = useMemo(() => [...new Set(allRecords.map((t) => t.course_name))], [allRecords]);
+  const filteredRows = useMemo(() => {
+    if (!search.trim()) return rows;
+    const q = search.toLowerCase();
+    return rows.filter((row) => {
+      const course = row.training_courses?.course_title?.toLowerCase() ?? "";
+      const provider = row.training_courses?.provider_name?.toLowerCase() ?? "";
+      const staff = row.users?.email?.toLowerCase() ?? "";
+      return course.includes(q) || provider.includes(q) || staff.includes(q);
+    });
+  }, [rows, search]);
 
-  const filtered = useMemo(() => {
-    let list = [...allRecords];
-    if (search) {
-      const q = search.toLowerCase();
-      list = list.filter((t) =>
-        t.course_name.toLowerCase().includes(q) ||
-        getStaffName(t.staff_id).toLowerCase().includes(q)
-      );
-    }
-    if (filterStatus) list = list.filter((t) => t.status === filterStatus);
-    return list;
-  }, [allRecords, search, filterStatus]);
-
-  const isLoading = trainingQuery.isPending || staffQuery.isPending;
+  const syncLogs = (syncStatusQuery.data?.logs ?? []) as Array<Record<string, unknown>>;
+  const syncErrors = (syncStatusQuery.data?.errors ?? []) as Array<Record<string, unknown>>;
+  const activeFilterCount = [statusFilter, providerFilter, requirementFilter].filter(Boolean).length;
 
   return (
     <PageShell
-      title="Training & Compliance"
+      title="Training Matrix & LMS Integration"
       subtitle={
-        meta
-          ? `${meta.rate}% overall compliance · ${meta.expired} expired · ${meta.expiring} expiring`
-          : "Loading…"
+        summary
+          ? `${summary.compliant}/${summary.total} compliant · ${summary.overdue} overdue · ${summary.dueSoon} due soon`
+          : "Live provider-linked training matrix for Acacia Therapy Homes"
       }
       quickCreateContext={{ module: "training", defaultTaskCategory: "training" }}
       actions={
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" disabled title="Training records are uploaded via the Documents section.">
-            <Plus className="h-3.5 w-3.5" /> Add Record
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => runSyncMutation.mutate({ mode: "manual" })}
+            disabled={runSyncMutation.isPending}
+          >
+            <RefreshCw className={cn("h-3.5 w-3.5", runSyncMutation.isPending && "animate-spin")} />
+            Sync Now
           </Button>
-          <Button size="sm" disabled title="Compliance reports are generated from the Reports page.">
-            Compliance Report
+          <Button size="sm" variant={showAdmin ? "default" : "outline"} onClick={() => setShowAdmin((prev) => !prev)}>
+            <Settings className="h-3.5 w-3.5" /> Provider Admin
           </Button>
         </div>
       }
     >
       <div className="space-y-6 animate-fade-in">
-
-        {/* Summary stats */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <div className="rounded-2xl border bg-white p-4 text-center">
-            <div className="text-2xl font-bold text-slate-900">{meta?.total ?? "—"}</div>
-            <div className="text-xs text-slate-500">Total Records</div>
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+          <div className="rounded-2xl border bg-white p-4">
+            <div className="text-xs text-slate-500">Completion Rate</div>
+            <div className="text-2xl font-bold text-emerald-600">
+              {summary?.total ? `${Math.round((summary.compliant / summary.total) * 100)}%` : "0%"}
+            </div>
           </div>
-          <div className="rounded-2xl border bg-white p-4 text-center">
-            <div className="text-2xl font-bold text-emerald-600">{meta?.compliant ?? "—"}</div>
+          <div className="rounded-2xl border bg-white p-4">
             <div className="text-xs text-slate-500">Compliant</div>
+            <div className="text-2xl font-bold text-emerald-600">{summary?.compliant ?? 0}</div>
           </div>
-          <div className="rounded-2xl border bg-white p-4 text-center">
-            <div className="text-2xl font-bold text-amber-600">{meta?.expiring ?? "—"}</div>
-            <div className="text-xs text-slate-500">Expiring Soon</div>
+          <div className="rounded-2xl border bg-white p-4">
+            <div className="text-xs text-slate-500">Overdue Mandatory</div>
+            <div className="text-2xl font-bold text-orange-600">{summary?.overdue ?? 0}</div>
           </div>
-          <div className="rounded-2xl border bg-white p-4 text-center">
-            <div className="text-2xl font-bold text-red-600">{meta?.expired ?? "—"}</div>
-            <div className="text-xs text-slate-500">Expired</div>
+          <div className="rounded-2xl border bg-white p-4">
+            <div className="text-xs text-slate-500">Due Soon</div>
+            <div className="text-2xl font-bold text-amber-600">{summary?.dueSoon ?? 0}</div>
           </div>
-          <div className="rounded-2xl border bg-white p-4 text-center">
-            {meta ? (
-              <>
-                <Progress
-                  value={meta.rate}
-                  color={meta.rate > 80 ? "bg-emerald-500" : meta.rate > 60 ? "bg-amber-500" : "bg-red-500"}
-                  className="mt-1"
-                />
-                <div className="text-lg font-bold text-slate-900 mt-1">{meta.rate}%</div>
-              </>
-            ) : (
-              <div className="text-2xl font-bold text-slate-300">—</div>
+          <div className="rounded-2xl border bg-white p-4">
+            <div className="text-xs text-slate-500">Expired Certificates</div>
+            <div className="text-2xl font-bold text-red-600">{summary?.expired ?? 0}</div>
+          </div>
+          <div className="rounded-2xl border bg-white p-4">
+            <div className="text-xs text-slate-500">Sync Health</div>
+            <div className={cn("text-sm font-semibold mt-1", syncErrors.length > 0 ? "text-red-600" : "text-emerald-600")}>
+              {syncErrors.length > 0 ? "Issues Detected" : "Healthy"}
+            </div>
+            {typeof syncLogs[0]?.started_at === "string" && (
+              <div className="text-[11px] text-slate-500 mt-1">Last sync {formatDate(String(syncLogs[0].started_at))}</div>
             )}
-            <div className="text-xs text-slate-500">Compliance Rate</div>
           </div>
         </div>
 
-        {/* Alert banner */}
-        {meta && meta.expired > 0 && (
-          <div className="rounded-2xl bg-red-50 border border-red-200 p-4 flex items-start gap-3">
-            <XCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
-            <div>
-              <div className="text-sm font-semibold text-red-800">
-                {meta.expired} training record{meta.expired > 1 ? "s" : ""} expired
-              </div>
-              <div className="text-xs text-red-600 mt-0.5">
-                Staff with expired mandatory training should not work unsupervised until recertified.
-              </div>
+        <div className="flex flex-wrap gap-2">
+          <Button variant={view === "my" ? "default" : "outline"} size="sm" onClick={() => setView("my")}>
+            My Training
+          </Button>
+          <Button variant={view === "home" ? "default" : "outline"} size="sm" onClick={() => setView("home")}>
+            <Building2 className="h-3.5 w-3.5" /> Home Training Matrix
+          </Button>
+          <Button variant={view === "organisation" ? "default" : "outline"} size="sm" onClick={() => setView("organisation")}>
+            <Users className="h-3.5 w-3.5" /> Organisation Training Matrix
+          </Button>
+          {activeFilterCount > 0 && (
+            <span className="ml-1 inline-flex items-center rounded-full border border-teal-200 bg-teal-50 px-2 py-0.5 text-[11px] font-medium text-teal-800">
+              {formatFiltersAppliedLabel(activeFilterCount)}
+            </span>
+          )}
+        </div>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search staff, course, provider" />
+              <select className="h-10 rounded-md border bg-white px-3 text-sm" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <option value="">All compliance</option>
+                <option value="compliant">Compliant</option>
+                <option value="due_soon">Due Soon</option>
+                <option value="overdue">Overdue</option>
+                <option value="expired">Expired</option>
+                <option value="incomplete">Incomplete</option>
+                <option value="non_compliant">Non-Compliant</option>
+              </select>
+              <select className="h-10 rounded-md border bg-white px-3 text-sm" value={providerFilter} onChange={(event) => setProviderFilter(event.target.value)}>
+                <option value="">All providers</option>
+                {providers.map((provider) => (
+                  <option key={provider} value={provider}>
+                    {provider}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="h-10 rounded-md border bg-white px-3 text-sm"
+                value={requirementFilter}
+                onChange={(event) => setRequirementFilter(event.target.value as "mandatory" | "optional" | "")}
+              >
+                <option value="">Mandatory + Optional</option>
+                <option value="mandatory">Mandatory</option>
+                <option value="optional">Optional</option>
+              </select>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearch("");
+                  setStatusFilter("");
+                  setProviderFilter("");
+                  setRequirementFilter("");
+                }}
+              >
+                Reset Filters
+              </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        {syncErrors.length > 0 && (
+          <div className="rounded-2xl bg-red-50 border border-red-200 p-4">
+            <div className="text-sm font-semibold text-red-800">Provider sync failures need attention</div>
+            <ul className="mt-2 space-y-1 text-xs text-red-700">
+              {syncErrors.slice(0, 3).map((error) => (
+                <li key={String(error.id)}>
+                  {String(error.error_message ?? "Unknown sync error")} ({formatDate(String(error.created_at ?? ""))})
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
-        {/* Filters + view toggle */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search training…"
-              className="pl-9"
-            />
-          </div>
-          <div className="flex gap-1">
-            {Object.entries(STATUS_STYLES).map(([key, cfg]) => (
-              <Button
-                key={key}
-                variant={filterStatus === key ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilterStatus(filterStatus === key ? null : key)}
-                className="gap-1"
-              >
-                <cfg.icon className="h-3 w-3" />{cfg.label}
-              </Button>
-            ))}
-          </div>
-          <div className="flex gap-1 ml-auto">
-            <Button variant={view === "matrix" ? "default" : "outline"} size="sm" onClick={() => setView("matrix")}>Matrix</Button>
-            <Button variant={view === "list" ? "default" : "outline"} size="sm" onClick={() => setView("list")}>List</Button>
-          </div>
-        </div>
-
-        {/* Loading */}
-        {isLoading && (
+        {(matrixQuery.isPending || syncStatusQuery.isPending) && (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
           </div>
         )}
 
-        {/* Matrix View */}
-        {!isLoading && view === "matrix" && (
+        {!matrixQuery.isPending && (
           <Card className="overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[800px]">
+              <table className="w-full min-w-[1200px]">
                 <thead>
                   <tr className="border-b bg-slate-50">
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-slate-600 w-[180px] sticky left-0 bg-slate-50 z-10">Staff</th>
-                    {courses.map((course) => (
-                      <th key={course} className="py-3 px-2 text-center text-[10px] font-medium text-slate-600 min-w-[100px]">
-                        <div className="truncate">{course}</div>
-                      </th>
-                    ))}
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Staff</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Role</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Home</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Course</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Provider</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Mandatory</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Due</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Completed</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Expires</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Compliance</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Certificate</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Open Training</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Last Sync</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {activeStaff.map((staff) => (
-                    <tr key={staff.id} className="border-b hover:bg-slate-50/50">
-                      <td className="py-2 px-4 sticky left-0 bg-white z-10">
-                        <div className="flex items-center gap-2">
-                          <Avatar name={staff.full_name} size="sm" />
-                          <div>
-                            <div className="text-xs font-medium text-slate-900">{staff.full_name}</div>
-                            <div className="text-[10px] text-slate-400">{staff.job_title}</div>
-                          </div>
-                        </div>
-                      </td>
-                      {courses.map((course) => {
-                        const record = allRecords.find((t) => t.staff_id === staff.id && t.course_name === course);
-                        if (!record) {
-                          return <td key={course} className="py-2 px-2 text-center"><div className="text-[10px] text-slate-300">—</div></td>;
-                        }
-                        const cfg = STATUS_STYLES[record.status] ?? STATUS_STYLES.not_started;
-                        const Icon = cfg.icon;
-                        return (
-                          <td key={course} className="py-2 px-2 text-center">
-                            <div className={cn("inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[9px] font-medium", cfg.color)}>
-                              <Icon className="h-3 w-3" />
-                              {record.expiry_date ? formatDate(record.expiry_date).split(",")[0] : cfg.label}
-                            </div>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
+                  {filteredRows.map((row) => {
+                    const style = STATUS_STYLES[row.compliance_status] ?? STATUS_STYLES.incomplete;
+                    const Icon = style.icon;
+
+                    return (
+                      <tr key={row.id} className="border-b hover:bg-slate-50">
+                        <td className="px-3 py-2 text-sm text-slate-700">{row.users?.email ?? row.staff_member_id}</td>
+                        <td className="px-3 py-2 text-sm text-slate-700">{row.role_id ?? "-"}</td>
+                        <td className="px-3 py-2 text-sm text-slate-700">{row.home_id ?? "All homes"}</td>
+                        <td className="px-3 py-2 text-sm text-slate-700">{row.training_courses?.course_title ?? row.course_id}</td>
+                        <td className="px-3 py-2 text-sm text-slate-700">{row.training_courses?.provider_name ?? "-"}</td>
+                        <td className="px-3 py-2 text-sm text-slate-700">{row.requirement_type === "mandatory" ? "Yes" : "Optional"}</td>
+                        <td className="px-3 py-2 text-sm text-slate-700">{row.due_date ? formatDate(row.due_date) : "-"}</td>
+                        <td className="px-3 py-2 text-sm text-slate-700">{row.completed_at ? formatDate(row.completed_at) : "-"}</td>
+                        <td className="px-3 py-2 text-sm text-slate-700">{row.expires_at ? formatDate(row.expires_at) : "-"}</td>
+                        <td className="px-3 py-2 text-sm">
+                          <Badge className={cn("text-[11px] rounded-full", style.color)}>
+                            <Icon className="mr-1 h-3 w-3" />
+                            {style.label}
+                          </Badge>
+                        </td>
+                        <td className="px-3 py-2 text-sm text-slate-700">{row.certificate_status ?? "missing"}</td>
+                        <td className="px-3 py-2 text-sm">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7"
+                            onClick={() =>
+                              openTrainingMutation.mutate({
+                                providerCourseId: row.training_courses?.id ?? row.course_id,
+                                providerName: "vocational_training_hub",
+                                fallbackCourseUrl: row.direct_course_url ?? undefined,
+                                courseId: row.course_id,
+                              })
+                            }
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" /> Open Training
+                          </Button>
+                        </td>
+                        <td className="px-3 py-2 text-sm text-slate-700">{row.last_synced_at ? formatDate(row.last_synced_at) : "-"}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
+            {filteredRows.length === 0 && <div className="p-8 text-center text-sm text-slate-500">No matrix rows match current filters.</div>}
           </Card>
         )}
 
-        {/* List View */}
-        {!isLoading && view === "list" && (
-          <div className="space-y-2">
-            {filtered.length === 0 ? (
-              <div className="rounded-2xl border bg-white p-12 text-center">
-                <GraduationCap className="h-8 w-8 text-slate-200 mx-auto mb-3" />
-                <div className="text-sm text-slate-500">No training records match your filters</div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                <Bell className="h-4 w-4 text-slate-500" /> Recent Training Notifications
               </div>
-            ) : (
-              filtered.map((record) => {
-                const cfg = STATUS_STYLES[record.status] ?? STATUS_STYLES.not_started;
-                const Icon = cfg.icon;
-                return (
-                  <div key={record.id} className="rounded-xl border bg-white p-4 flex items-center gap-4 hover:shadow-sm transition-all">
-                    <div className={cn("rounded-full p-2 shrink-0", cfg.color)}>
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-slate-900">{record.course_name}</div>
-                      <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
-                        <span>{getStaffName(record.staff_id)}</span>
-                        {record.provider && <span className="text-slate-400">via {record.provider}</span>}
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      {record.expiry_date && (
-                        <div className={cn("text-xs font-medium", record.status === "expired" ? "text-red-600" : record.status === "expiring_soon" ? "text-amber-600" : "text-slate-500")}>
-                          {record.status === "expired" ? "Expired" : "Expires"} {formatDate(record.expiry_date)}
-                        </div>
-                      )}
-                      <Badge className={cn("text-[9px] rounded-full mt-1", cfg.color)}>{cfg.label}</Badge>
-                    </div>
-                    {record.is_mandatory && <Shield className="h-4 w-4 text-blue-400 shrink-0" aria-label="Mandatory" />}
+              <div className="mt-3 space-y-2">
+                {(notificationsQuery.data?.notifications ?? []).slice(0, 5).map((notification) => (
+                  <div key={notification.id} className="rounded-lg border p-3">
+                    <div className="text-sm font-medium text-slate-900">{notification.title}</div>
+                    <div className="text-xs text-slate-600 mt-1">{notification.message}</div>
+                    <div className="text-[11px] text-slate-400 mt-2">{formatDate(notification.created_at)}</div>
                   </div>
-                );
-              })
-            )}
-          </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                <FileText className="h-4 w-4 text-slate-500" /> Phase 4 Training Reports
+              </div>
+              <ul className="mt-3 space-y-2 text-sm text-slate-700">
+                <li>Staff Training Record</li>
+                <li>Staff Training Matrix Export</li>
+                <li>Home Training Compliance Report</li>
+                <li>Mandatory Training Overdue Report</li>
+                <li>Due Soon / Expiring Training Report</li>
+                <li>Course Completion Report</li>
+                <li>Certificate Audit Report</li>
+                <li>Provider Sync Audit Report</li>
+              </ul>
+              <div className="mt-3 text-xs text-slate-500">ARIA manager summaries are available when generating these report templates.</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {showAdmin && (
+          <Card>
+            <CardContent className="p-4 space-y-4">
+              <div className="text-sm font-semibold text-slate-900">Vocational Training Hub Provider Configuration</div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <Input id="vthApiBaseUrl" placeholder="API Base URL" defaultValue={String((providerConfigQuery.data?.connection as { config?: Record<string, unknown> } | undefined)?.config?.apiBaseUrl ?? "")} />
+                <Input id="vthPortalBaseUrl" placeholder="Portal Base URL" defaultValue={String((providerConfigQuery.data?.connection as { config?: Record<string, unknown> } | undefined)?.config?.portalBaseUrl ?? "")} />
+                <Input id="vthWebhookSecret" placeholder="Webhook Secret" type="password" defaultValue={String((providerConfigQuery.data?.connection as { config?: Record<string, unknown> } | undefined)?.config?.webhookSecret ?? "")} />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <Input id="vthApiToken" placeholder="API Token" type="password" defaultValue={String((providerConfigQuery.data?.connection as { config?: Record<string, unknown> } | undefined)?.config?.apiToken ?? "")} />
+                <Input id="vthPollingInterval" placeholder="Polling interval minutes" defaultValue={String((providerConfigQuery.data?.connection as { polling_interval_minutes?: number } | undefined)?.polling_interval_minutes ?? 30)} />
+                <Input id="vthWarningWindow" placeholder="Due soon warning window days" defaultValue={String((providerConfigQuery.data?.connection as { warning_window_days?: number } | undefined)?.warning_window_days ?? 30)} />
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={() => {
+                    const apiBaseUrl = (document.getElementById("vthApiBaseUrl") as HTMLInputElement | null)?.value ?? "";
+                    const portalBaseUrl = (document.getElementById("vthPortalBaseUrl") as HTMLInputElement | null)?.value ?? "";
+                    const webhookSecret = (document.getElementById("vthWebhookSecret") as HTMLInputElement | null)?.value ?? "";
+                    const apiToken = (document.getElementById("vthApiToken") as HTMLInputElement | null)?.value ?? "";
+                    const pollingIntervalMinutes = Number((document.getElementById("vthPollingInterval") as HTMLInputElement | null)?.value ?? "30");
+                    const warningWindowDays = Number((document.getElementById("vthWarningWindow") as HTMLInputElement | null)?.value ?? "30");
+
+                    saveProviderConfigMutation.mutate({
+                      providerCode: "vocational_training_hub",
+                      enabled: true,
+                      pollingEnabled: true,
+                      pollingIntervalMinutes,
+                      warningWindowDays,
+                      certificateSyncEnabled: true,
+                      courseCatalogSyncEnabled: true,
+                      config: {
+                        apiBaseUrl,
+                        portalBaseUrl,
+                        webhookSecret,
+                        apiToken,
+                        warningWindowDays,
+                      },
+                    });
+                  }}
+                  disabled={saveProviderConfigMutation.isPending}
+                >
+                  Save Provider Settings
+                </Button>
+
+                <Button variant="outline" onClick={() => runSyncMutation.mutate({ mode: "poll" })} disabled={runSyncMutation.isPending}>
+                  Run Polling Sync
+                </Button>
+              </div>
+
+              <div className="text-xs text-slate-500">Secrets remain server-side in provider connection config and are never returned to client responses after save.</div>
+            </CardContent>
+          </Card>
         )}
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-sm font-semibold text-slate-900 mb-2 flex items-center gap-2">
+              <Shield className="h-4 w-4 text-slate-500" /> ARIA Training Oversight Support
+            </div>
+            <ul className="text-sm text-slate-700 space-y-1">
+              <li>Summarise training compliance by home and role</li>
+              <li>Draft concise manager commentary on training gaps</li>
+              <li>Highlight repeated non-compliance patterns</li>
+              <li>Generate report summaries for compliance packs</li>
+              <li>Summarise sync failures for admin triage</li>
+            </ul>
+            <p className="text-xs text-slate-500 mt-3">ARIA remains read/assistive only and does not change completion status directly.</p>
+          </CardContent>
+        </Card>
       </div>
     </PageShell>
   );

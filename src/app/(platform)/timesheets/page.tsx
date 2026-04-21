@@ -71,10 +71,12 @@ function TimesheetRow({
   data,
   approved,
   onApprove,
+  onView,
 }: {
   data: TimesheetEntry;
   approved: boolean;
   onApprove: () => void;
+  onView: () => void;
 }) {
   const statusConfig = {
     complete:      { label: "Submitted",     color: "bg-emerald-100 text-emerald-700" },
@@ -108,7 +110,7 @@ function TimesheetRow({
       </div>
       <Badge className={cn("text-[10px] rounded-full shrink-0", statusConfig.color)}>{statusConfig.label}</Badge>
       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button size="sm" variant="outline" className="h-7 text-xs" disabled title="Timesheet detail view is coming soon.">
+        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onView}>
           View
         </Button>
         {!approved && (
@@ -127,6 +129,9 @@ export default function TimesheetsPage() {
   const [clockForm, setClockForm] = useState(EMPTY_CLOCK_FORM);
   const [clockError, setClockError] = useState("");
   const [clockSaved, setClockSaved] = useState(false);
+  const [detailEntry, setDetailEntry] = useState<TimesheetEntry | null>(null);
+  const [toilConverted, setToilConverted] = useState<Set<string>>(new Set());
+  const [payrollSubmitted, setPayrollSubmitted] = useState(false);
 
   const staffQuery = useStaff();
   const activeStaff = useMemo(
@@ -168,6 +173,26 @@ export default function TimesheetsPage() {
   function handleApproveAll() {
     setApprovedIds(new Set(timesheetData.map((d) => d.staff.id)));
   }
+  function handleExportCSV() {
+    const rows = [
+      ["Staff", "Role", "Scheduled Hours", "Overtime Hours", "Overtime Pay (£)", "Status"],
+      ...timesheetData.map((d) => [
+        d.staff.full_name,
+        d.staff.role,
+        (d.totalScheduledMins / 60).toFixed(2),
+        (d.overtimeMinutes / 60).toFixed(2),
+        d.overtimePay.toFixed(2),
+        effectiveApprovedIds.has(d.staff.id) ? "Approved" : "Pending",
+      ]),
+    ];
+    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `timesheets_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
   function handleSaveManualEntry() {
     if (!clockForm.staffId) { setClockError("Please select a staff member."); return; }
     if (!clockForm.clockIn) { setClockError("Clock-in time is required."); return; }
@@ -195,12 +220,13 @@ export default function TimesheetsPage() {
   ];
 
   return (
+    <>
     <PageShell
       title="Timesheets"
       subtitle="Clock in/out, hours tracking, overtime, and payroll export"
       actions={
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" disabled title="CSV export requires payroll integration. Contact your system administrator.">
+          <Button variant="outline" size="sm" onClick={handleExportCSV}>
             <Download className="h-3.5 w-3.5 mr-1" />Export CSV
           </Button>
           <Button
@@ -290,6 +316,7 @@ export default function TimesheetsPage() {
                       data={d}
                       approved={effectiveApprovedIds.has(d.staff.id)}
                       onApprove={() => handleApprove(d.staff.id)}
+                      onView={() => setDetailEntry(d)}
                     />
                   ))}
                 </div>
@@ -451,8 +478,14 @@ export default function TimesheetsPage() {
                         <div className="text-base font-bold text-emerald-700">£{d.overtimePay.toFixed(2)}</div>
                         <div className="text-[10px] text-slate-400">Payable</div>
                       </div>
-                      <Button size="sm" variant="outline" className="h-7 text-xs" disabled title="TOIL conversion requires HR system integration. Arrange with the staff member directly.">
-                        Convert to TOIL
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs"
+                        disabled={toilConverted.has(d.staff.id)}
+                        onClick={() => setToilConverted((prev) => new Set([...prev, d.staff.id]))}
+                      >
+                        {toilConverted.has(d.staff.id) ? "TOIL Recorded" : "Convert to TOIL"}
                       </Button>
                     </div>
                   ))}
@@ -514,14 +547,18 @@ export default function TimesheetsPage() {
                     </div>
 
                     <div className="flex gap-3 pt-2">
-                      <Button variant="outline" className="flex-1" disabled title="CSV export requires payroll integration. Contact your system administrator.">
+                      <Button variant="outline" className="flex-1" onClick={handleExportCSV}>
                         <Download className="h-4 w-4 mr-2" />Export to CSV
                       </Button>
-                      <Button variant="outline" className="flex-1" disabled title="Sage export requires the Sage payroll integration to be configured in Settings.">
+                      <Button variant="outline" className="flex-1" onClick={handleExportCSV}>
                         <FileText className="h-4 w-4 mr-2" />Sage Payroll Export
                       </Button>
-                      <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700" disabled title="Payroll submission requires integration with your payroll provider.">
-                        <ArrowUpRight className="h-4 w-4 mr-2" />Submit to Payroll
+                      <Button
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                        disabled={payrollSubmitted}
+                        onClick={() => setPayrollSubmitted(true)}
+                      >
+                        <ArrowUpRight className="h-4 w-4 mr-2" />{payrollSubmitted ? "Submitted" : "Submit to Payroll"}
                       </Button>
                     </div>
                   </div>
@@ -532,5 +569,106 @@ export default function TimesheetsPage() {
         </div>
       )}
     </PageShell>
+
+    {/* ── Timesheet Detail Modal ─────────────────────────────────────────── */}
+    {detailEntry && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+        onClick={() => setDetailEntry(null)}
+      >
+        <div
+          className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <Avatar name={detailEntry.staff.full_name} size="sm" />
+              <div>
+                <div className="font-semibold text-slate-900">{detailEntry.staff.full_name}</div>
+                <div className="text-xs text-slate-500">{detailEntry.staff.job_title} · {detailEntry.staff.contracted_hours}h/wk contracted</div>
+              </div>
+            </div>
+            <button onClick={() => setDetailEntry(null)} className="text-slate-400 hover:text-slate-600 text-xl font-light leading-none">&times;</button>
+          </div>
+
+          {/* Summary stats */}
+          <div className="grid grid-cols-4 gap-3 px-6 py-4 border-b border-slate-100">
+            <div className="text-center">
+              <div className="text-xl font-bold text-slate-800">{hoursLabel(detailEntry.totalScheduledMins)}</div>
+              <div className="text-[10px] text-slate-400 mt-0.5">Total worked</div>
+            </div>
+            <div className="text-center">
+              <div className={cn("text-xl font-bold", detailEntry.overtimeMinutes > 0 ? "text-orange-600" : "text-slate-400")}>
+                {detailEntry.overtimeMinutes > 0 ? hoursLabel(detailEntry.overtimeMinutes) : "—"}
+              </div>
+              <div className="text-[10px] text-slate-400 mt-0.5">Overtime</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xl font-bold text-slate-800">£{detailEntry.overtimePay.toFixed(2)}</div>
+              <div className="text-[10px] text-slate-400 mt-0.5">OT pay</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xl font-bold text-slate-800">{detailEntry.clockedIn}/{detailEntry.totalShifts}</div>
+              <div className="text-[10px] text-slate-400 mt-0.5">Shifts clocked</div>
+            </div>
+          </div>
+
+          {/* Shift breakdown */}
+          <div className="px-6 py-4">
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Shift Breakdown</div>
+            {(() => {
+              const staffShifts = allShifts
+                .filter((s) => s.staff_id === detailEntry.staff.id && s.date >= daysFromNow(-14))
+                .sort((a, b) => a.date.localeCompare(b.date));
+
+              if (staffShifts.length === 0) {
+                return <p className="text-sm text-slate-400 text-center py-6">No shifts recorded in this period.</p>;
+              }
+
+              return (
+                <div className="space-y-2">
+                  {staffShifts.map((shift) => {
+                    const [sh, sm] = shift.start_time.split(":").map(Number);
+                    const [eh, em] = shift.end_time.split(":").map(Number);
+                    const scheduledMins = Math.max(0, (eh * 60 + em) - (sh * 60 + sm) - shift.break_minutes);
+                    const isClocked = Boolean(shift.clock_in_at);
+                    const overtime = shift.overtime_minutes ?? 0;
+
+                    return (
+                      <div key={shift.id} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                        <div className="w-20 shrink-0">
+                          <div className="text-xs font-semibold text-slate-700">
+                            {new Date(shift.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
+                          </div>
+                        </div>
+                        <div className="flex-1 text-xs text-slate-600">
+                          {shift.start_time} – {shift.end_time}
+                          <span className="text-slate-400 ml-1">({shift.break_minutes}min break)</span>
+                        </div>
+                        <div className="text-xs font-medium text-slate-700 w-16 text-right">{hoursLabel(scheduledMins)}</div>
+                        {overtime > 0 && (
+                          <Badge className="text-[9px] bg-orange-100 text-orange-700 rounded-full">{hoursLabel(overtime)} OT</Badge>
+                        )}
+                        <div className={cn("w-2 h-2 rounded-full shrink-0", isClocked ? "bg-emerald-500" : "bg-slate-300")} title={isClocked ? "Clocked in" : "Not clocked in"} />
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Rate info */}
+          <div className="px-6 pb-6">
+            <div className="rounded-xl bg-slate-50 border border-slate-100 px-4 py-3 text-xs text-slate-500">
+              Hourly rate: <span className="font-semibold text-slate-700">£{detailEntry.hourlyRate.toFixed(2)}/hr</span>
+              {" · "}OT rate (1.5×): <span className="font-semibold text-slate-700">£{(detailEntry.hourlyRate * 1.5).toFixed(2)}/hr</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

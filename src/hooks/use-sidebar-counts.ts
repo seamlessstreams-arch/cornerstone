@@ -28,6 +28,8 @@ export interface SidebarCounts {
   incidents: number;
   /** Care forms currently awaiting review/approval */
   forms: number;
+  /** High-confidence active pattern alerts */
+  alerts: number;
 }
 
 export function useSidebarCounts(): SidebarCounts {
@@ -49,6 +51,12 @@ export function useSidebarCounts(): SidebarCounts {
     ...OPTS,
   });
 
+  const alertsQ = useQuery<{ count: number } | null>({
+    queryKey: ["sidebar", "alerts"],
+    queryFn: () => get("/api/v1/intelligence/pattern-alerts/count"),
+    ...OPTS,
+  });
+
   // Show overdue + urgent for tasks — the most actionable number
   const taskOverdue = tasksQ.data?.meta?.overdue ?? 0;
   const taskUrgent  = tasksQ.data?.meta?.urgent  ?? 0;
@@ -57,5 +65,6 @@ export function useSidebarCounts(): SidebarCounts {
     tasks:     Math.max(taskOverdue, taskUrgent), // pick the larger attention signal
     incidents: incidentsQ.data?.meta?.open          ?? 0,
     forms:     formsQ.data?.meta?.pending_review    ?? 0,
+    alerts:    alertsQ.data?.count                  ?? 0,
   };
 }

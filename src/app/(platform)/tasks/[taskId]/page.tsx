@@ -556,14 +556,14 @@ export default function TaskDetailPage() {
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {task.linked_child_id && (
-                    <Link href={`/young-people`} className="flex items-center gap-2 rounded-xl bg-purple-50 px-3 py-2 hover:bg-purple-100 transition-colors">
+                    <Link href={`/young-people/${task.linked_child_id}`} className="flex items-center gap-2 rounded-xl bg-purple-50 px-3 py-2 hover:bg-purple-100 transition-colors">
                       <Heart className="h-4 w-4 text-purple-500 shrink-0" />
                       <span className="text-xs font-medium text-purple-700 flex-1">{getYPName(task.linked_child_id)}</span>
                       <ChevronRight className="h-3.5 w-3.5 text-purple-400" />
                     </Link>
                   )}
                   {task.linked_incident_id && (
-                    <Link href={`/incidents`} className="flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 hover:bg-red-100 transition-colors">
+                    <Link href={`/incidents/${task.linked_incident_id}`} className="flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 hover:bg-red-100 transition-colors">
                       <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
                       <span className="text-xs font-medium text-red-700 flex-1">{task.linked_incident_id.replace("inc_", "INC-")}</span>
                       <ChevronRight className="h-3.5 w-3.5 text-red-400" />

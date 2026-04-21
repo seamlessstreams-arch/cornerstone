@@ -48,3 +48,20 @@ export async function GET(req: NextRequest) {
     },
   });
 }
+
+export async function POST(req: NextRequest) {
+  const body = await req.json();
+  const { staff_id, leave_type, start_date, end_date } = body;
+
+  if (!staff_id) return NextResponse.json({ error: "staff_id is required" }, { status: 400 });
+  if (!leave_type) return NextResponse.json({ error: "leave_type is required" }, { status: 400 });
+  if (!start_date) return NextResponse.json({ error: "start_date is required" }, { status: 400 });
+  if (!end_date) return NextResponse.json({ error: "end_date is required" }, { status: 400 });
+
+  const start = new Date(start_date);
+  const end = new Date(end_date);
+  const total_days = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
+
+  const leave = db.leave.create({ staff_id, leave_type, start_date, end_date, total_days });
+  return NextResponse.json({ data: leave }, { status: 201 });
+}

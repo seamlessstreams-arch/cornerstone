@@ -15,7 +15,7 @@ import {
   SunMedium, RotateCcw, Ban, Info, Loader2,
 } from "lucide-react";
 import { getStaffName } from "@/lib/seed-data";
-import { useLeave } from "@/hooks/use-leave";
+import { useLeave, useCreateLeave } from "@/hooks/use-leave";
 import { useStaff } from "@/hooks/use-staff";
 import { cn, todayStr, formatDate, daysFromNow } from "@/lib/utils";
 import { LEAVE_TYPE_LABELS } from "@/lib/constants";
@@ -163,6 +163,10 @@ export default function LeavePage() {
   const [showRTW, setShowRTW] = useState(false);
   // Local status overrides — applied on top of API data for approve/decline actions
   const [statusOverrides, setStatusOverrides] = useState<Record<string, "approved" | "declined">>({});
+  const [showRequestLeave, setShowRequestLeave] = useState(false);
+  const [requestLeaveForm, setRequestLeaveForm] = useState({ staff_id: "", leave_type: "annual", start_date: "", end_date: "" });
+  const [requestLeaveError, setRequestLeaveError] = useState("");
+  const createLeave = useCreateLeave();
   const today = todayStr();
 
   const leaveQuery = useLeave();
@@ -187,6 +191,27 @@ export default function LeavePage() {
   }
   function handleDecline(id: string) {
     setStatusOverrides((prev) => ({ ...prev, [id]: "declined" }));
+  }
+
+  function handleExportCSV() {
+    const rows = [
+      ["Staff", "Leave Type", "Start Date", "End Date", "Days", "Status"],
+      ...leaveRequests.map((r) => [
+        getStaffName(r.staff_id),
+        r.leave_type,
+        r.start_date,
+        r.end_date,
+        String(r.total_days),
+        r.status,
+      ]),
+    ];
+    const csv = rows.map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `leave_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   const filteredRequests = useMemo(() => {
@@ -220,16 +245,17 @@ export default function LeavePage() {
   ];
 
   return (
+    <>
     <PageShell
       title="Leave & Absence"
       subtitle="Manage annual leave, sickness, lateness, and return-to-work workflows"
       quickCreateContext={{ module: "leave", defaultTaskCategory: "staffing" }}
       actions={
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" disabled title="Leave export requires HR integration. Contact your system administrator.">
+          <Button variant="outline" size="sm" onClick={handleExportCSV}>
             <Filter className="h-3.5 w-3.5 mr-1" />Export
           </Button>
-          <Button size="sm" disabled title="Leave requests are submitted directly by staff. Approve requests from the Leave Requests tab.">
+          <Button size="sm" onClick={() => setShowRequestLeave(true)}>
             <Plus className="h-3.5 w-3.5 mr-1" />Request Leave
           </Button>
         </div>
@@ -567,5 +593,59 @@ export default function LeavePage() {
         )}
       </div>
     </PageShell>
+
+    {showRequestLeave && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4" onClick={() => setShowRequestLeave(false)}>
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-5">
+            <span className="text-base font-bold text-slate-900">Request Leave</span>
+            <button onClick={() => setShowRequestLeave(false)} className="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-600 block mb-1.5">Staff Member <span className="text-red-500">*</span></label>
+              <select value={requestLeaveForm.staff_id} onChange={(e) => setRequestLeaveForm((f) => ({ ...f, staff_id: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                <option value="">Select staff…</option>
+                {activeStaff.map((s) => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-600 block mb-1.5">Leave Type <span className="text-red-500">*</span></label>
+              <select value={requestLeaveForm.leave_type} onChange={(e) => setRequestLeaveForm((f) => ({ ...f, leave_type: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                {Object.entries(LEAVE_TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Start Date <span className="text-red-500">*</span></label>
+                <input type="date" value={requestLeaveForm.start_date} onChange={(e) => setRequestLeaveForm((f) => ({ ...f, start_date: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">End Date <span className="text-red-500">*</span></label>
+                <input type="date" value={requestLeaveForm.end_date} onChange={(e) => setRequestLeaveForm((f) => ({ ...f, end_date: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+              </div>
+            </div>
+            {requestLeaveError && <p className="text-xs text-red-600 font-medium">{requestLeaveError}</p>}
+          </div>
+          <div className="mt-5 flex gap-3">
+            <Button className="flex-1" disabled={createLeave.isPending} onClick={() => {
+              if (!requestLeaveForm.staff_id) { setRequestLeaveError("Staff member is required."); return; }
+              if (!requestLeaveForm.start_date) { setRequestLeaveError("Start date is required."); return; }
+              if (!requestLeaveForm.end_date) { setRequestLeaveError("End date is required."); return; }
+              if (requestLeaveForm.end_date < requestLeaveForm.start_date) { setRequestLeaveError("End date must be after start date."); return; }
+              setRequestLeaveError("");
+              createLeave.mutate(
+                { staff_id: requestLeaveForm.staff_id, leave_type: requestLeaveForm.leave_type, start_date: requestLeaveForm.start_date, end_date: requestLeaveForm.end_date },
+                { onSuccess: () => { setShowRequestLeave(false); setRequestLeaveForm({ staff_id: "", leave_type: "annual", start_date: "", end_date: "" }); }, onError: () => setRequestLeaveError("Failed to submit request.") }
+              );
+            }}>
+              <Plus className="h-4 w-4" />{createLeave.isPending ? "Submitting…" : "Submit Request"}
+            </Button>
+            <Button variant="outline" onClick={() => setShowRequestLeave(false)}>Cancel</Button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

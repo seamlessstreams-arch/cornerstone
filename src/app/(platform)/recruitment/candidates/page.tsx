@@ -12,7 +12,7 @@ import {
   CheckCircle2, ArrowUpDown, Eye, Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useRecruitment } from "@/hooks/use-recruitment";
+import { useRecruitment, useCreateCandidate } from "@/hooks/use-recruitment";
 import type { CandidateDetail } from "@/hooks/use-recruitment";
 
 // ── Status helpers ────────────────────────────────────────────────────────────
@@ -127,6 +127,10 @@ export default function CandidatesPage() {
   const [riskFilter, setRiskFilter] = useState("all");
   const [sortField, setSortField] = useState<SortField>("days");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [showAddCandidate, setShowAddCandidate] = useState(false);
+  const [addCandidateForm, setAddCandidateForm] = useState({ first_name: "", last_name: "", email: "", phone: "", role_applied: "", source: "" });
+  const [addCandidateError, setAddCandidateError] = useState("");
+  const createCandidate = useCreateCandidate();
 
   const candidates = useMemo<CandidateDetail[]>(() => {
     const all = data?.candidates ?? [];
@@ -187,11 +191,12 @@ export default function CandidatesPage() {
   const active = candidates.filter(c => !CLOSED_STAGES.has(c.stage)).length;
 
   return (
+    <>
     <PageShell
       title="All Candidates"
       subtitle="Manage your recruitment pipeline with full compliance visibility"
       actions={
-        <Button className="bg-slate-900 text-white hover:bg-slate-700 rounded-xl" size="sm" disabled title="New candidates are added when they apply via your recruitment portal or are entered by HR.">
+        <Button className="bg-slate-900 text-white hover:bg-slate-700 rounded-xl" size="sm" onClick={() => setShowAddCandidate(true)}>
           <Plus className="h-4 w-4 mr-1.5" /> Add Candidate
         </Button>
       }
@@ -382,9 +387,74 @@ export default function CandidatesPage() {
           </div>
           <div className="px-4 py-2 border-t border-slate-50 bg-slate-50 text-[10px] text-slate-400">
             Showing {candidates.length} of {total} candidates
-          </div>
+      </div>
         </Card>
       )}
     </PageShell>
+
+    {showAddCandidate && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4" onClick={() => setShowAddCandidate(false)}>
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-5">
+            <span className="text-base font-bold text-slate-900">Add Candidate</span>
+            <button onClick={() => setShowAddCandidate(false)} className="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+          </div>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">First Name <span className="text-red-500">*</span></label>
+                <input value={addCandidateForm.first_name} onChange={(e) => setAddCandidateForm((f) => ({ ...f, first_name: e.target.value }))} placeholder="First name" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Last Name <span className="text-red-500">*</span></label>
+                <input value={addCandidateForm.last_name} onChange={(e) => setAddCandidateForm((f) => ({ ...f, last_name: e.target.value }))} placeholder="Last name" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-600 block mb-1.5">Email <span className="text-red-500">*</span></label>
+              <input type="email" value={addCandidateForm.email} onChange={(e) => setAddCandidateForm((f) => ({ ...f, email: e.target.value }))} placeholder="candidate@email.com" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-600 block mb-1.5">Phone</label>
+              <input value={addCandidateForm.phone} onChange={(e) => setAddCandidateForm((f) => ({ ...f, phone: e.target.value }))} placeholder="07700 000000" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-600 block mb-1.5">Role Applied For <span className="text-red-500">*</span></label>
+              <input value={addCandidateForm.role_applied} onChange={(e) => setAddCandidateForm((f) => ({ ...f, role_applied: e.target.value }))} placeholder="e.g. Support Worker" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-600 block mb-1.5">Source</label>
+              <select value={addCandidateForm.source} onChange={(e) => setAddCandidateForm((f) => ({ ...f, source: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                <option value="">Select source…</option>
+                <option value="indeed">Indeed</option>
+                <option value="linkedin">LinkedIn</option>
+                <option value="referral">Referral</option>
+                <option value="direct">Direct Application</option>
+                <option value="agency">Agency</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            {addCandidateError && <p className="text-xs text-red-600 font-medium">{addCandidateError}</p>}
+          </div>
+          <div className="mt-5 flex gap-3">
+            <Button className="flex-1" disabled={createCandidate.isPending} onClick={() => {
+              if (!addCandidateForm.first_name.trim()) { setAddCandidateError("First name is required."); return; }
+              if (!addCandidateForm.last_name.trim()) { setAddCandidateError("Last name is required."); return; }
+              if (!addCandidateForm.email.trim()) { setAddCandidateError("Email is required."); return; }
+              if (!addCandidateForm.role_applied.trim()) { setAddCandidateError("Role applied is required."); return; }
+              setAddCandidateError("");
+              createCandidate.mutate(
+                { first_name: addCandidateForm.first_name.trim(), last_name: addCandidateForm.last_name.trim(), email: addCandidateForm.email.trim(), phone: addCandidateForm.phone.trim() || undefined, role_applied: addCandidateForm.role_applied.trim(), source: addCandidateForm.source || undefined },
+                { onSuccess: () => { setShowAddCandidate(false); setAddCandidateForm({ first_name: "", last_name: "", email: "", phone: "", role_applied: "", source: "" }); }, onError: () => setAddCandidateError("Failed to add candidate.") }
+              );
+            }}>
+              <Plus className="h-4 w-4" />{createCandidate.isPending ? "Adding…" : "Add Candidate"}
+            </Button>
+            <Button variant="outline" onClick={() => setShowAddCandidate(false)}>Cancel</Button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

@@ -164,6 +164,28 @@ export default function ExpensesPage() {
     updateExpense.mutate({ id, data: { status: "rejected" } });
   }
 
+  function handleExportCSV() {
+    const rows = [
+      ["Date", "Staff", "Category", "Description", "Amount (£)", "Status", "Payment Method"],
+      ...expenses.map((e) => [
+        e.date,
+        getStaffName(e.submitted_by),
+        e.category,
+        e.description,
+        e.amount.toFixed(2),
+        e.status,
+        e.payment_method ?? "",
+      ]),
+    ];
+    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `expenses_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function handleSubmitExpense() {
     if (!form.description.trim()) { setFormError("Description is required"); return; }
     if (!form.amount || parseFloat(form.amount) <= 0) { setFormError("Enter a valid amount"); return; }
@@ -203,7 +225,7 @@ export default function ExpensesPage() {
       quickCreateContext={{ module: "expenses", defaultTaskCategory: "finance" }}
       actions={
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" disabled title="Export requires payroll integration.">
+          <Button variant="outline" size="sm" onClick={handleExportCSV}>
             <Download className="h-3.5 w-3.5 mr-1" />Export
           </Button>
           <Button size="sm" onClick={() => setShowNewForm(!showNewForm)}>

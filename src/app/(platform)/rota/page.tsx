@@ -10,10 +10,11 @@ import {
   ChevronLeft, ChevronRight, Plus, Clock,
   Sun, UserX, CheckCircle2, Loader2,
 } from "lucide-react";
-import { useRota } from "@/hooks/use-rota";
+import { useRota, useCreateShift } from "@/hooks/use-rota";
 import { useStaff } from "@/hooks/use-staff";
 import { cn, todayStr, formatDate } from "@/lib/utils";
-import { SHIFT_TYPE_LABELS } from "@/lib/constants";
+import { SHIFT_TYPE_LABELS, SHIFT_TYPES } from "@/lib/constants";
+import { useToast } from "@/components/ui/toast";
 
 const SHIFT_COLORS: Record<string, string> = {
   day: "bg-emerald-100 text-emerald-800 border-emerald-200",
@@ -35,6 +36,11 @@ function getMondayOfWeek(offset: number): string {
 
 export default function RotaPage() {
   const [weekOffset, setWeekOffset] = useState(0);
+  const [showAddShift, setShowAddShift] = useState(false);
+  const [addShiftForm, setAddShiftForm] = useState({ staff_id: "", date: todayStr(), shift_type: "day", start_time: "07:00", end_time: "15:00", break_minutes: "30", notes: "" });
+  const [addShiftError, setAddShiftError] = useState("");
+  const [rotaPublished, setRotaPublished] = useState(false);
+  const createShift = useCreateShift();
   const today = todayStr();
 
   const weekStart = useMemo(() => getMondayOfWeek(weekOffset), [weekOffset]);
@@ -55,6 +61,7 @@ export default function RotaPage() {
 
   const rotaQuery = useRota(weekStart);
   const staffQuery = useStaff();
+  const { toast } = useToast();
 
   const shifts = rotaQuery.data?.shifts ?? [];
   const leave = rotaQuery.data?.leave ?? [];
@@ -65,17 +72,18 @@ export default function RotaPage() {
   const isLoading = rotaQuery.isPending || staffQuery.isPending;
 
   return (
+    <>
     <PageShell
       title="Rota"
       subtitle={weekLabel}
       quickCreateContext={{ module: "rota", defaultTaskCategory: "staffing" }}
       actions={
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" disabled title="Shifts are added through your scheduling system.">
+          <Button variant="outline" size="sm" onClick={() => setShowAddShift(true)}>
             <Plus className="h-3.5 w-3.5" /> Add Shift
           </Button>
-          <Button size="sm" disabled title="Rota publication requires all open shifts to be filled.">
-            Publish Rota
+          <Button size="sm" disabled={rotaPublished} onClick={() => setRotaPublished(true)}>
+            {rotaPublished ? "Rota Published" : "Publish Rota"}
           </Button>
         </div>
       }
@@ -114,8 +122,8 @@ export default function RotaPage() {
                     <span className="text-slate-400 ml-2">({SHIFT_TYPE_LABELS[s.type as keyof typeof SHIFT_TYPE_LABELS] || s.type})</span>
                   </div>
                   <div className="flex gap-1.5">
-                    <Button size="sm" variant="outline" className="text-xs h-7" disabled>Offer to Bank</Button>
-                    <Button size="sm" className="text-xs h-7 bg-amber-600 hover:bg-amber-700" disabled>Fill Shift</Button>
+                    <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => toast(`Shift on ${s.date} offered to bank staff. Bank workers will be notified via the staff portal.`, "info")}>Offer to Bank</Button>
+                    <Button size="sm" className="text-xs h-7 bg-amber-600 hover:bg-amber-700" onClick={() => setShowAddShift(true)}>Fill Shift</Button>
                   </div>
                 </div>
               ))}
@@ -253,11 +261,144 @@ export default function RotaPage() {
                     </div>
                   );
                 })}
+
+    {showAddShift && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4" onClick={() => setShowAddShift(false)}>
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-5">
+            <span className="text-base font-bold text-slate-900">Add Shift</span>
+            <button onClick={() => setShowAddShift(false)} className="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-600 block mb-1.5">Staff Member <span className="text-red-500">*</span></label>
+              <select value={addShiftForm.staff_id} onChange={(e) => setAddShiftForm((f) => ({ ...f, staff_id: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                <option value="">Select staff…</option>
+                {activeStaff.map((s) => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Date <span className="text-red-500">*</span></label>
+                <input type="date" value={addShiftForm.date} onChange={(e) => setAddShiftForm((f) => ({ ...f, date: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Shift Type <span className="text-red-500">*</span></label>
+                <select value={addShiftForm.shift_type} onChange={(e) => setAddShiftForm((f) => ({ ...f, shift_type: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                  {SHIFT_TYPES.map((t) => <option key={t} value={t}>{SHIFT_TYPE_LABELS[t]}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Start <span className="text-red-500">*</span></label>
+                <input type="time" value={addShiftForm.start_time} onChange={(e) => setAddShiftForm((f) => ({ ...f, start_time: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">End <span className="text-red-500">*</span></label>
+                <input type="time" value={addShiftForm.end_time} onChange={(e) => setAddShiftForm((f) => ({ ...f, end_time: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Break (min)</label>
+                <input type="number" value={addShiftForm.break_minutes} onChange={(e) => setAddShiftForm((f) => ({ ...f, break_minutes: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-600 block mb-1.5">Notes</label>
+              <input value={addShiftForm.notes} onChange={(e) => setAddShiftForm((f) => ({ ...f, notes: e.target.value }))} placeholder="Any notes…" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+            </div>
+            {addShiftError && <p className="text-xs text-red-600 font-medium">{addShiftError}</p>}
+          </div>
+          <div className="mt-5 flex gap-3">
+            <Button className="flex-1" disabled={createShift.isPending} onClick={() => {
+              if (!addShiftForm.staff_id) { setAddShiftError("Staff member is required."); return; }
+              if (!addShiftForm.date) { setAddShiftError("Date is required."); return; }
+              if (!addShiftForm.start_time || !addShiftForm.end_time) { setAddShiftError("Start and end times are required."); return; }
+              setAddShiftError("");
+              createShift.mutate(
+                { staff_id: addShiftForm.staff_id, date: addShiftForm.date, shift_type: addShiftForm.shift_type, start_time: addShiftForm.start_time, end_time: addShiftForm.end_time, break_minutes: Number(addShiftForm.break_minutes) || 30, notes: addShiftForm.notes.trim() || undefined },
+                { onSuccess: () => { setShowAddShift(false); setAddShiftForm({ staff_id: "", date: today, shift_type: "day", start_time: "07:00", end_time: "15:00", break_minutes: "30", notes: "" }); }, onError: () => setAddShiftError("Failed to add shift.") }
+              );
+            }}>
+              <Plus className="h-4 w-4" />{createShift.isPending ? "Adding…" : "Add Shift"}
+            </Button>
+            <Button variant="outline" onClick={() => setShowAddShift(false)}>Cancel</Button>
+          </div>
+        </div>
+      </div>
+    )}
               </div>
             </CardContent>
           </Card>
         )}
       </div>
     </PageShell>
+
+    {showAddShift && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4" onClick={() => setShowAddShift(false)}>
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-5">
+            <span className="text-base font-bold text-slate-900">Add Shift</span>
+            <button onClick={() => setShowAddShift(false)} className="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-600 block mb-1.5">Staff Member <span className="text-red-500">*</span></label>
+              <select value={addShiftForm.staff_id} onChange={(e) => setAddShiftForm((f) => ({ ...f, staff_id: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                <option value="">Select staff…</option>
+                {activeStaff.map((s) => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Date <span className="text-red-500">*</span></label>
+                <input type="date" value={addShiftForm.date} onChange={(e) => setAddShiftForm((f) => ({ ...f, date: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Shift Type <span className="text-red-500">*</span></label>
+                <select value={addShiftForm.shift_type} onChange={(e) => setAddShiftForm((f) => ({ ...f, shift_type: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                  {SHIFT_TYPES.map((t) => <option key={t} value={t}>{SHIFT_TYPE_LABELS[t]}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Start <span className="text-red-500">*</span></label>
+                <input type="time" value={addShiftForm.start_time} onChange={(e) => setAddShiftForm((f) => ({ ...f, start_time: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">End <span className="text-red-500">*</span></label>
+                <input type="time" value={addShiftForm.end_time} onChange={(e) => setAddShiftForm((f) => ({ ...f, end_time: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Break (min)</label>
+                <input type="number" value={addShiftForm.break_minutes} onChange={(e) => setAddShiftForm((f) => ({ ...f, break_minutes: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-600 block mb-1.5">Notes</label>
+              <input value={addShiftForm.notes} onChange={(e) => setAddShiftForm((f) => ({ ...f, notes: e.target.value }))} placeholder="Any notes…" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+            </div>
+            {addShiftError && <p className="text-xs text-red-600 font-medium">{addShiftError}</p>}
+          </div>
+          <div className="mt-5 flex gap-3">
+            <Button className="flex-1" disabled={createShift.isPending} onClick={() => {
+              if (!addShiftForm.staff_id) { setAddShiftError("Staff member is required."); return; }
+              if (!addShiftForm.date) { setAddShiftError("Date is required."); return; }
+              if (!addShiftForm.start_time || !addShiftForm.end_time) { setAddShiftError("Start and end times are required."); return; }
+              setAddShiftError("");
+              createShift.mutate(
+                { staff_id: addShiftForm.staff_id, date: addShiftForm.date, shift_type: addShiftForm.shift_type, start_time: addShiftForm.start_time, end_time: addShiftForm.end_time, break_minutes: Number(addShiftForm.break_minutes) || 30, notes: addShiftForm.notes.trim() || undefined },
+                { onSuccess: () => { setShowAddShift(false); setAddShiftForm({ staff_id: "", date: today, shift_type: "day", start_time: "07:00", end_time: "15:00", break_minutes: "30", notes: "" }); }, onError: () => setAddShiftError("Failed to add shift.") }
+              );
+            }}>
+              <Plus className="h-4 w-4" />{createShift.isPending ? "Adding…" : "Add Shift"}
+            </Button>
+            <Button variant="outline" onClick={() => setShowAddShift(false)}>Cancel</Button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

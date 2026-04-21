@@ -60,3 +60,45 @@ export function useCreateIncident() {
     },
   });
 }
+
+// ── Intelligence hooks ────────────────────────────────────────────────────────
+
+export interface SimilarIncidentResult {
+  incident: Incident;
+  matchReasons: string[];
+  daysSince: number;
+  patternNote: string;
+}
+
+export interface RiskAssessmentResult {
+  score: number;
+  level: "low" | "medium" | "high" | "critical";
+  factors: Array<{ label: string; weight: number; description: string }>;
+  protectiveFactors: string[];
+  recommendedActions: string[];
+}
+
+export function useSimilarIncidents(incidentId: string | undefined) {
+  return useQuery({
+    queryKey: ["incidents", "similar", incidentId],
+    queryFn: () =>
+      api.get<{ data: SimilarIncidentResult[]; total: number }>(
+        `/intelligence/incidents/similar?incident_id=${incidentId}`
+      ),
+    enabled: !!incidentId,
+    staleTime: 60_000,
+  });
+}
+
+export function useIncidentRiskAssessment(incidentId: string | undefined) {
+  return useQuery({
+    queryKey: ["incidents", "risk-assessment", incidentId],
+    queryFn: () =>
+      api.post<{ data: RiskAssessmentResult }>(
+        "/intelligence/incidents/risk-assessment",
+        { incident_id: incidentId }
+      ),
+    enabled: !!incidentId,
+    staleTime: 60_000,
+  });
+}

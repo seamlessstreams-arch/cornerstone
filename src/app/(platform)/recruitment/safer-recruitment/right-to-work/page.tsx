@@ -12,9 +12,11 @@ import {
 import { cn } from "@/lib/utils";
 import {
   useRecruitment,
+  useUpdateCheck,
   type RecruitmentCheck,
   type CandidateDetail,
 } from "@/hooks/use-recruitment";
+import { useToast } from "@/components/ui/toast";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -113,6 +115,15 @@ function RTWRow({ candidate, rtwCheck }: RTWRowProps) {
 export default function RightToWorkPage() {
   const { data, isLoading, isError, error } = useRecruitment();
   const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({
+    candidate_id: "",
+    document_type: "UK Passport",
+    verified_by: "",
+    verified_at: "",
+    expiry_date: "",
+  });
+  const updateCheck = useUpdateCheck();
+  const { toast } = useToast();
 
   const { rows, stats } = useMemo(() => {
     const candidates = data?.candidates ?? [];
@@ -240,15 +251,49 @@ export default function RightToWorkPage() {
         </CardContent>
       </Card>
 
-      {/* Add verification modal (simple inline) */}
+      {/* Add verification modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
             <div className="text-sm font-semibold text-slate-900 mb-4">Add Right to Work Verification</div>
-            <div className="space-y-3">
+            <form
+              className="space-y-3"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const candidate = (data?.candidates ?? []).find((c: CandidateDetail) => c.id === form.candidate_id);
+                const rtwCheck = candidate?.checks.find(ch => ch.check_type === "right_to_work");
+                if (!rtwCheck) {
+                  toast("No right-to-work check record found for this candidate.", "error");
+                  return;
+                }
+                try {
+                  await updateCheck.mutateAsync({
+                    checkId: rtwCheck.id,
+                    candidateId: form.candidate_id,
+                    data: {
+                      status: "verified",
+                      document_type: form.document_type,
+                      verified_by: form.verified_by,
+                      verified_at: form.verified_at ? new Date(form.verified_at).toISOString() : new Date().toISOString(),
+                      expiry_date: form.expiry_date || undefined,
+                    },
+                  });
+                  toast("Right to Work verification saved.", "success");
+                  setShowModal(false);
+                  setForm({ candidate_id: "", document_type: "UK Passport", verified_by: "", verified_at: "", expiry_date: "" });
+                } catch {
+                  toast("Failed to save verification. Please try again.", "error");
+                }
+              }}
+            >
               <div>
                 <label className="text-xs font-medium text-slate-500 mb-1 block">Candidate</label>
-                <select className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900">
+                <select
+                  required
+                  value={form.candidate_id}
+                  onChange={e => setForm(f => ({ ...f, candidate_id: e.target.value }))}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                >
                   <option value="">Select candidate...</option>
                   {(data?.candidates ?? []).map((c: CandidateDetail) => (
                     <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>
@@ -257,7 +302,11 @@ export default function RightToWorkPage() {
               </div>
               <div>
                 <label className="text-xs font-medium text-slate-500 mb-1 block">Document Type</label>
-                <select className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900">
+                <select
+                  value={form.document_type}
+                  onChange={e => setForm(f => ({ ...f, document_type: e.target.value }))}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                >
                   <option>UK Passport</option>
                   <option>EU Settled Status</option>
                   <option>BRP Card</option>
@@ -267,21 +316,41 @@ export default function RightToWorkPage() {
               </div>
               <div>
                 <label className="text-xs font-medium text-slate-500 mb-1 block">Verified By</label>
-                <input type="text" placeholder="Name of person who verified" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
+                <input
+                  required
+                  type="text"
+                  placeholder="Name of person who verified"
+                  value={form.verified_by}
+                  onChange={e => setForm(f => ({ ...f, verified_by: e.target.value }))}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                />
               </div>
               <div>
                 <label className="text-xs font-medium text-slate-500 mb-1 block">Verification Date</label>
-                <input type="date" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
+                <input
+                  required
+                  type="date"
+                  value={form.verified_at}
+                  onChange={e => setForm(f => ({ ...f, verified_at: e.target.value }))}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1 block">Expiry Date (if time-limited)</label>
-                <input type="date" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
+                <label className="text-xs font-medium text-slate-500 mb-1 block">Expiry Date <span className="text-slate-400 font-normal">(if time-limited)</span></label>
+                <input
+                  type="date"
+                  value={form.expiry_date}
+                  onChange={e => setForm(f => ({ ...f, expiry_date: e.target.value }))}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                />
               </div>
-            </div>
-            <div className="flex gap-2 mt-5">
-              <Button size="sm" className="flex-1" onClick={() => setShowModal(false)}>Save Verification</Button>
-              <Button size="sm" variant="outline" onClick={() => setShowModal(false)}>Cancel</Button>
-            </div>
+              <div className="flex gap-2 mt-5">
+                <Button type="submit" size="sm" className="flex-1" disabled={updateCheck.isPending}>
+                  {updateCheck.isPending ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />Saving…</> : "Save Verification"}
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => setShowModal(false)} disabled={updateCheck.isPending}>Cancel</Button>
+              </div>
+            </form>
           </div>
         </div>
       )}

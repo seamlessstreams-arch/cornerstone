@@ -63,3 +63,50 @@ body {
 .animate-pulse-dot {
   animation: pulse-dot 2s ease-in-out infinite;
 }
+
+/* ── Print / PDF styles ────────────────────────────────────────────────────── */
+@media print {
+  /* Hide chrome */
+  nav, aside, header, footer,
+  [data-sidebar], [data-topbar],
+  .print\:hidden { display: none !important; }
+
+  /* Reset background */
+  body, main, [data-main-content] {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 11pt;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Make content full width */
+  [data-page-shell-content] {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  /* Clean up cards */
+  .rounded-2xl, .rounded-xl, .rounded-3xl {
+    border-radius: 4px !important;
+    box-shadow: none !important;
+  }
+
+  /* Show all content without hiding */
+  * {
+    overflow: visible !important;
+  }
+
+  /* Page breaks */
+  section, .form-section {
+    page-break-inside: avoid;
+  }
+
+  h1, h2, h3 { page-break-after: avoid; }
+
+  /* Page setup */
+  @page {
+    size: A4 portrait;
+    margin: 15mm 12mm;
+  }
+}

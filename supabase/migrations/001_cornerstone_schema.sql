@@ -8,7 +8,7 @@
 -- ══════════════════════════════════════════════════════════════════════════════
 
 -- Extensions
-create extension if not exists "uuid-ossp";
+
 create extension if not exists "pg_trgm"; -- for full-text search
 
 -- ── Enums ─────────────────────────────────────────────────────────────────────
@@ -60,7 +60,7 @@ $$;
 -- ── Homes ─────────────────────────────────────────────────────────────────────
 
 create table homes (
-  id                        uuid primary key default uuid_generate_v4(),
+  id                        uuid primary key default gen_random_uuid(),
   name                      text not null,
   address                   text not null,
   phone                     text,
@@ -77,7 +77,7 @@ create table homes (
 -- ── Staff ─────────────────────────────────────────────────────────────────────
 
 create table staff_members (
-  id                        uuid primary key default uuid_generate_v4(),
+  id                        uuid primary key default gen_random_uuid(),
   home_id                   uuid not null references homes(id) on delete cascade,
   first_name                text not null,
   last_name                 text not null,
@@ -119,7 +119,7 @@ create index idx_staff_active on staff_members(is_active);
 -- ── Young People ──────────────────────────────────────────────────────────────
 
 create table young_people (
-  id                      uuid primary key default uuid_generate_v4(),
+  id                      uuid primary key default gen_random_uuid(),
   home_id                 uuid not null references homes(id) on delete cascade,
   first_name              text not null,
   last_name               text not null,
@@ -164,7 +164,7 @@ create index idx_yp_status on young_people(status);
 -- ── Incidents ─────────────────────────────────────────────────────────────────
 
 create table incidents (
-  id                      uuid primary key default uuid_generate_v4(),
+  id                      uuid primary key default gen_random_uuid(),
   home_id                 uuid not null references homes(id) on delete cascade,
   reference               text not null unique,
   type                    incident_type not null,
@@ -209,7 +209,7 @@ create index idx_incidents_oversight on incidents(requires_oversight, oversight_
 -- ── Missing from Care ─────────────────────────────────────────────────────────
 
 create table missing_episodes (
-  id                              uuid primary key default uuid_generate_v4(),
+  id                              uuid primary key default gen_random_uuid(),
   home_id                         uuid not null references homes(id) on delete cascade,
   reference                       text not null unique,
   child_id                        uuid not null references young_people(id),
@@ -244,7 +244,7 @@ create index idx_missing_status on missing_episodes(status);
 -- ── Chronology ────────────────────────────────────────────────────────────────
 
 create table chronology_entries (
-  id                    uuid primary key default uuid_generate_v4(),
+  id                    uuid primary key default gen_random_uuid(),
   home_id               uuid not null references homes(id) on delete cascade,
   child_id              uuid not null references young_people(id),
   date                  date not null,
@@ -263,7 +263,7 @@ create index idx_chronology_child on chronology_entries(child_id, date desc);
 -- ── Tasks ─────────────────────────────────────────────────────────────────────
 
 create table tasks (
-  id                    uuid primary key default uuid_generate_v4(),
+  id                    uuid primary key default gen_random_uuid(),
   home_id               uuid not null references homes(id) on delete cascade,
   title                 text not null,
   description           text not null default '',
@@ -313,7 +313,7 @@ create index idx_tasks_priority on tasks(priority);
 -- ── Shifts / Rota ─────────────────────────────────────────────────────────────
 
 create table shifts (
-  id                uuid primary key default uuid_generate_v4(),
+  id                uuid primary key default gen_random_uuid(),
   home_id           uuid not null references homes(id) on delete cascade,
   staff_id          uuid references staff_members(id),
   date              date not null,
@@ -341,7 +341,7 @@ create index idx_shifts_open on shifts(is_open_shift) where is_open_shift = true
 -- ── Leave Requests ────────────────────────────────────────────────────────────
 
 create table leave_requests (
-  id                          uuid primary key default uuid_generate_v4(),
+  id                          uuid primary key default gen_random_uuid(),
   home_id                     uuid not null references homes(id) on delete cascade,
   staff_id                    uuid not null references staff_members(id),
   leave_type                  leave_type not null,
@@ -365,7 +365,7 @@ create table leave_requests (
 -- ── Medications ───────────────────────────────────────────────────────────────
 
 create table medications (
-  id                    uuid primary key default uuid_generate_v4(),
+  id                    uuid primary key default gen_random_uuid(),
   home_id               uuid not null references homes(id) on delete cascade,
   child_id              uuid not null references young_people(id),
   name                  text not null,
@@ -391,7 +391,7 @@ create index idx_medications_child on medications(child_id);
 create index idx_medications_active on medications(is_active);
 
 create table medication_administrations (
-  id                uuid primary key default uuid_generate_v4(),
+  id                uuid primary key default gen_random_uuid(),
   home_id           uuid not null references homes(id) on delete cascade,
   medication_id     uuid not null references medications(id),
   child_id          uuid not null references young_people(id),
@@ -418,7 +418,7 @@ create index idx_mar_exceptions on medication_administrations(status) where stat
 -- ── Daily Log ─────────────────────────────────────────────────────────────────
 
 create table daily_log_entries (
-  id                    uuid primary key default uuid_generate_v4(),
+  id                    uuid primary key default gen_random_uuid(),
   home_id               uuid not null references homes(id) on delete cascade,
   child_id              uuid not null references young_people(id),
   date                  date not null,
@@ -441,7 +441,7 @@ create index idx_daily_log_home_date on daily_log_entries(home_id, date desc);
 -- ── Handovers ─────────────────────────────────────────────────────────────────
 
 create table handovers (
-  id                    uuid primary key default uuid_generate_v4(),
+  id                    uuid primary key default gen_random_uuid(),
   home_id               uuid not null references homes(id) on delete cascade,
   shift_date            date not null,
   shift_from            text not null,
@@ -464,7 +464,7 @@ create index idx_handovers_home_date on handovers(home_id, shift_date desc);
 -- ── Training ──────────────────────────────────────────────────────────────────
 
 create table training_records (
-  id                uuid primary key default uuid_generate_v4(),
+  id                uuid primary key default gen_random_uuid(),
   home_id           uuid not null references homes(id) on delete cascade,
   staff_id          uuid not null references staff_members(id),
   course_name       text not null,
@@ -488,7 +488,7 @@ create index idx_training_expiry on training_records(expiry_date);
 -- ── Supervisions ──────────────────────────────────────────────────────────────
 
 create table supervisions (
-  id                    uuid primary key default uuid_generate_v4(),
+  id                    uuid primary key default gen_random_uuid(),
   home_id               uuid not null references homes(id) on delete cascade,
   staff_id              uuid not null references staff_members(id),
   supervisor_id         uuid not null references staff_members(id),
@@ -513,7 +513,7 @@ create table supervisions (
 -- ── Documents ─────────────────────────────────────────────────────────────────
 
 create table documents (
-  id                    uuid primary key default uuid_generate_v4(),
+  id                    uuid primary key default gen_random_uuid(),
   home_id               uuid not null references homes(id) on delete cascade,
   title                 text not null,
   category              document_category not null,
@@ -536,7 +536,7 @@ create table documents (
 );
 
 create table document_read_receipts (
-  id            uuid primary key default uuid_generate_v4(),
+  id            uuid primary key default gen_random_uuid(),
   document_id   uuid not null references documents(id) on delete cascade,
   staff_id      uuid not null references staff_members(id),
   read_at       timestamptz not null default now(),
@@ -547,7 +547,7 @@ create table document_read_receipts (
 -- ── Expenses ──────────────────────────────────────────────────────────────────
 
 create table expenses (
-  id              uuid primary key default uuid_generate_v4(),
+  id              uuid primary key default gen_random_uuid(),
   home_id         uuid not null references homes(id) on delete cascade,
   submitted_by    uuid not null references staff_members(id),
   category        text not null,
@@ -568,7 +568,7 @@ create table expenses (
 -- ── Buildings & H&S ──────────────────────────────────────────────────────────
 
 create table buildings (
-  id                          uuid primary key default uuid_generate_v4(),
+  id                          uuid primary key default gen_random_uuid(),
   home_id                     uuid not null references homes(id) on delete cascade,
   name                        text not null,
   type                        text not null default 'residential',
@@ -585,7 +585,7 @@ create table buildings (
 );
 
 create table building_checks (
-  id                      uuid primary key default uuid_generate_v4(),
+  id                      uuid primary key default gen_random_uuid(),
   home_id                 uuid not null references homes(id) on delete cascade,
   building_id             uuid not null references buildings(id),
   area                    text not null,
@@ -612,7 +612,7 @@ create index idx_building_checks_status on building_checks(status);
 -- ── Vehicles ──────────────────────────────────────────────────────────────────
 
 create table vehicles (
-  id                  uuid primary key default uuid_generate_v4(),
+  id                  uuid primary key default gen_random_uuid(),
   home_id             uuid not null references homes(id) on delete cascade,
   registration        text not null unique,
   make                text not null,
@@ -634,7 +634,7 @@ create table vehicles (
 );
 
 create table vehicle_checks (
-  id              uuid primary key default uuid_generate_v4(),
+  id              uuid primary key default gen_random_uuid(),
   home_id         uuid not null references homes(id) on delete cascade,
   vehicle_id      uuid not null references vehicles(id),
   check_type      text not null default 'daily_safety',
@@ -661,7 +661,7 @@ create index idx_vehicle_checks_vehicle on vehicle_checks(vehicle_id, check_date
 -- ── Candidates ────────────────────────────────────────────────────────────────
 
 create table candidates (
-  id                    uuid primary key default uuid_generate_v4(),
+  id                    uuid primary key default gen_random_uuid(),
   home_id               uuid not null references homes(id) on delete cascade,
   first_name            text not null,
   last_name             text not null,
@@ -690,7 +690,7 @@ create table candidates (
 -- ── Aria Interactions ─────────────────────────────────────────────────────────
 
 create table aria_interactions (
-  id                uuid primary key default uuid_generate_v4(),
+  id                uuid primary key default gen_random_uuid(),
   home_id           uuid not null references homes(id) on delete cascade,
   staff_id          uuid not null references staff_members(id),
   mode              aria_mode not null,
@@ -712,7 +712,7 @@ create index idx_aria_home on aria_interactions(home_id);
 -- ── Time Saved ────────────────────────────────────────────────────────────────
 
 create table time_saved_entries (
-  id            uuid primary key default uuid_generate_v4(),
+  id            uuid primary key default gen_random_uuid(),
   home_id       uuid not null references homes(id) on delete cascade,
   staff_id      uuid not null references staff_members(id),
   action_type   text not null,
@@ -727,7 +727,7 @@ create index idx_time_saved_home on time_saved_entries(home_id, created_at desc)
 -- ── Notifications ─────────────────────────────────────────────────────────────
 
 create table notifications (
-  id              uuid primary key default uuid_generate_v4(),
+  id              uuid primary key default gen_random_uuid(),
   home_id         uuid not null references homes(id) on delete cascade,
   recipient_id    uuid not null references staff_members(id),
   title           text not null,
@@ -747,7 +747,7 @@ create index idx_notifications_recipient on notifications(recipient_id, read);
 -- ── Audit Log ─────────────────────────────────────────────────────────────────
 
 create table audit_log (
-  id              uuid primary key default uuid_generate_v4(),
+  id              uuid primary key default gen_random_uuid(),
   home_id         uuid not null references homes(id) on delete cascade,
   entity_type     text not null,
   entity_id       uuid not null,

@@ -94,3 +94,49 @@ export async function GET(req: NextRequest) {
     },
   });
 }
+
+export async function POST(req: NextRequest) {
+  const body = await req.json();
+  const { first_name, last_name, role, employment_type } = body;
+
+  if (!first_name?.trim()) return NextResponse.json({ error: "first_name is required" }, { status: 400 });
+  if (!last_name?.trim()) return NextResponse.json({ error: "last_name is required" }, { status: 400 });
+  if (!role) return NextResponse.json({ error: "role is required" }, { status: 400 });
+
+  const now = new Date().toISOString();
+  const staff = db.staff.create({
+    first_name: first_name.trim(),
+    last_name: last_name.trim(),
+    full_name: `${first_name.trim()} ${last_name.trim()}`,
+    email: body.email?.trim() || null,
+    phone: body.phone?.trim() || null,
+    role,
+    job_title: body.job_title?.trim() || role.replace(/_/g, " "),
+    employment_type: employment_type || "permanent",
+    employment_status: "probation",
+    start_date: body.start_date || todayStr(),
+    end_date: null,
+    probation_end_date: null,
+    contracted_hours: Number(body.contracted_hours) || 37.5,
+    hourly_rate: body.hourly_rate ? Number(body.hourly_rate) : null,
+    annual_salary: body.annual_salary ? Number(body.annual_salary) : null,
+    payroll_id: null,
+    dbs_number: body.dbs_number?.trim() || null,
+    dbs_issue_date: body.dbs_issue_date || null,
+    dbs_update_service: false,
+    emergency_contact_name: null,
+    emergency_contact_phone: null,
+    next_supervision_due: null,
+    next_appraisal_due: null,
+    avatar_url: null,
+    home_id: "home_oak",
+    is_active: true,
+    created_by: body.created_by || "staff_darren",
+    updated_by: body.created_by || "staff_darren",
+    created_at: now,
+    updated_at: now,
+  });
+
+  return NextResponse.json({ data: staff }, { status: 201 });
+}
+

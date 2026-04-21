@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -75,6 +76,31 @@ export default function AuditsPage() {
     ? Math.round(completedAudits.reduce((a, au) => a + au.score, 0) / completedAudits.length)
     : 0;
 
+  function handleExportCSV() {
+    const rows = [
+      ["Title", "Category", "Status", "Date", "Score", "Max Score", "Findings", "Completed By"].join(","),
+      ...audits.map((a) =>
+        [
+          `"${a.title.replace(/"/g, '""')}"`,
+          a.category,
+          a.status,
+          a.date,
+          a.score,
+          a.max_score,
+          a.findings,
+          a.completed_by ?? "",
+        ].join(",")
+      ),
+    ];
+    const blob = new Blob([rows.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `audits-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <>
       <PageShell
@@ -86,8 +112,8 @@ export default function AuditsPage() {
             <Button
               variant="outline"
               size="sm"
-              disabled
-              title="Audit export requires the reporting integration to be configured."
+              onClick={handleExportCSV}
+              disabled={audits.length === 0}
             >
               <Download className="h-3.5 w-3.5 mr-1" />Export
             </Button>
@@ -185,36 +211,36 @@ export default function AuditsPage() {
                         {audit.status.replace(/_/g, " ")}
                       </Badge>
                       {audit.status === "completed" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 text-xs shrink-0"
-                          disabled
-                          title="Audit detail view is coming soon."
-                        >
-                          View
-                        </Button>
+                        <Link href={`/audits/${audit.id}`}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 text-xs shrink-0"
+                          >
+                            View
+                          </Button>
+                        </Link>
                       )}
                       {audit.status === "scheduled" && (
-                        <Button
-                          size="sm"
-                          className="h-8 text-xs shrink-0"
-                          onClick={() => handleStart(audit.id)}
-                          disabled={updateAudit.isPending}
-                        >
-                          Start
-                        </Button>
+                        <Link href={`/audits/${audit.id}`}>
+                          <Button
+                            size="sm"
+                            className="h-8 text-xs shrink-0"
+                          >
+                            Start
+                          </Button>
+                        </Link>
                       )}
                       {audit.status === "in_progress" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 text-xs shrink-0"
-                          disabled
-                          title="Complete the audit form on paper and record the result."
-                        >
-                          In progress
-                        </Button>
+                        <Link href={`/audits/${audit.id}`}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 text-xs shrink-0 border-amber-300 text-amber-700 hover:bg-amber-50"
+                          >
+                            Continue
+                          </Button>
+                        </Link>
                       )}
                     </div>
                   ))}

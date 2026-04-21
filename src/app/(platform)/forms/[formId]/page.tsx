@@ -16,7 +16,7 @@ import { Avatar } from "@/components/ui/avatar";
 import {
   ArrowLeft, CheckCircle2, Clock, XCircle,
   AlertTriangle, Archive, Pencil, Save, X, Loader2,
-  AlertCircle, Heart, Tag, UserCheck, Send,
+  AlertCircle, Heart, Tag, UserCheck, Send, Printer,
 } from "lucide-react";
 import { getStaffName, getYPName } from "@/lib/seed-data";
 import { useForm, useUpdateForm, useSubmitForm, useApproveForm } from "@/hooks/use-forms";
@@ -245,6 +245,14 @@ export default function FormDetailPage() {
               <ArrowLeft className="h-3.5 w-3.5 mr-1" />All Forms
             </Button>
           </Link>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.print()}
+            className="gap-1.5 print:hidden"
+          >
+            <Printer className="h-3.5 w-3.5" />Print / PDF
+          </Button>
           {canEdit && isDraft && !editing && (
             <Button size="sm" variant="outline" onClick={beginEditing}>
               <Pencil className="h-3.5 w-3.5 mr-1" />Edit

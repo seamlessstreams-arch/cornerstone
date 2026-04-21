@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "./use-api";
+import type { CandidateInterview } from "@/types/recruitment";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -422,6 +423,23 @@ export function useUpdateOffer() {
     onSuccess: (_result, variables) => {
       qc.invalidateQueries({ queryKey: ["recruitment"] });
       qc.invalidateQueries({ queryKey: ["recruitment", variables.candidateId] });
+    },
+  });
+}
+
+export function useScheduleInterview() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      candidate_id: string;
+      scheduled_at: string;
+      mode: "in_person" | "video" | "phone";
+      interview_type?: string;
+      location?: string;
+      notes?: string;
+    }) => api.post<{ data: CandidateInterview }>("/recruitment/interviews", payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["recruitment"] });
     },
   });
 }

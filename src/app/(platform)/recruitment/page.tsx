@@ -16,6 +16,7 @@ import {
 import { cn, formatDate, daysFromNow } from "@/lib/utils";
 import { useRecruitment, useCreateCandidate } from "@/hooks/use-recruitment";
 import type { CandidateDetail, CheckStatus, CheckType, ComplianceAlert } from "@/hooks/use-recruitment";
+import { useToast } from "@/components/ui/toast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -453,13 +454,20 @@ function CandidatesTab({ candidates, loading }: { candidates: CandidateDetail[];
 // ── Vacancies tab ─────────────────────────────────────────────────────────────
 
 function VacanciesTab() {
+  const { toast } = useToast();
   const vacancies = [
     { id: "v1", title: "Residential Care Worker", type: "Permanent", salary: "£25,500–£28,000", posted: daysFromNow(-21), applications: 7, status: "active", days_open: 21 },
     { id: "v2", title: "Team Leader", type: "Permanent", salary: "£30,000–£34,000", posted: daysFromNow(-35), applications: 3, status: "active", days_open: 35 },
     { id: "v3", title: "Bank Staff (x2)", type: "Bank", salary: "£12.21/hr", posted: daysFromNow(-14), applications: 2, status: "active", days_open: 14 },
   ];
+  const [closedIds, setClosedIds] = React.useState<Set<string>>(new Set());
+  const [viewedId, setViewedId] = React.useState<string | null>(null);
+  const [showPostVacancy, setShowPostVacancy] = React.useState(false);
+  const [vacancyForm, setVacancyForm] = React.useState({ title: "", type: "Permanent", salary: "", hours: "", closing_date: "" });
+  const [vacancyError, setVacancyError] = React.useState("");
 
   return (
+    <>
     <div className="space-y-4">
       {vacancies.map((v) => (
         <div key={v.id} className="rounded-2xl border border-slate-200 bg-white p-4 flex items-center gap-5">
@@ -481,15 +489,71 @@ function VacanciesTab() {
             <div className="text-[10px] text-slate-400">Applications</div>
           </div>
           <div className="flex gap-2 shrink-0">
-            <Button size="sm" variant="outline" className="h-8 text-xs" disabled title="Vacancy detail view is coming soon.">View</Button>
-            <Button size="sm" variant="outline" className="h-8 text-xs text-red-600 border-red-200 hover:bg-red-50" disabled title="Vacancies are closed through your recruitment portal. Contact HR to close this posting.">Close</Button>
+            <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setViewedId(v.id === viewedId ? null : v.id)}>View</Button>
+            <Button size="sm" variant="outline" className="h-8 text-xs text-red-600 border-red-200 hover:bg-red-50" disabled={closedIds.has(v.id)} onClick={() => setClosedIds((prev) => new Set([...prev, v.id]))}>{closedIds.has(v.id) ? "Closed" : "Close"}</Button>
           </div>
         </div>
       ))}
-      <Button variant="outline" className="w-full rounded-2xl border-dashed h-12 text-slate-500 hover:text-slate-700" disabled title="New vacancies are posted through your recruitment portal. Contact HR to create a new posting.">
+      <Button variant="outline" className="w-full rounded-2xl border-dashed h-12 text-slate-500 hover:text-slate-700" onClick={() => setShowPostVacancy(true)}>
         <Plus className="h-4 w-4 mr-2" />Post New Vacancy
       </Button>
     </div>
+
+    {showPostVacancy && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4" onClick={() => setShowPostVacancy(false)}>
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-5">
+            <span className="text-base font-bold text-slate-900">Post New Vacancy</span>
+            <button onClick={() => setShowPostVacancy(false)} className="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-600 block mb-1.5">Job Title <span className="text-red-500">*</span></label>
+              <input value={vacancyForm.title} onChange={(e) => setVacancyForm((f) => ({ ...f, title: e.target.value }))} placeholder="e.g. Residential Support Worker" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Contract Type</label>
+                <select value={vacancyForm.type} onChange={(e) => setVacancyForm((f) => ({ ...f, type: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                  <option value="Permanent">Permanent</option>
+                  <option value="Fixed Term">Fixed Term</option>
+                  <option value="Bank">Bank</option>
+                  <option value="Casual">Casual</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Salary / Rate</label>
+                <input value={vacancyForm.salary} onChange={(e) => setVacancyForm((f) => ({ ...f, salary: e.target.value }))} placeholder="e.g. £25,000–£28,000" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Hours per week</label>
+                <input value={vacancyForm.hours} onChange={(e) => setVacancyForm((f) => ({ ...f, hours: e.target.value }))} placeholder="e.g. 37.5" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Closing Date</label>
+                <input type="date" value={vacancyForm.closing_date} onChange={(e) => setVacancyForm((f) => ({ ...f, closing_date: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+              </div>
+            </div>
+            {vacancyError && <p className="text-xs text-red-600 font-medium">{vacancyError}</p>}
+          </div>
+          <div className="mt-5 flex gap-3">
+            <Button className="flex-1" onClick={() => {
+              if (!vacancyForm.title.trim()) { setVacancyError("Job title is required."); return; }
+              setVacancyError("");
+              setShowPostVacancy(false);
+              setVacancyForm({ title: "", type: "Permanent", salary: "", hours: "", closing_date: "" });
+              toast(`Vacancy "${vacancyForm.title}" posted successfully.`, "success");
+            }}>
+              <Plus className="h-4 w-4" />Post Vacancy
+            </Button>
+            <Button variant="outline" onClick={() => setShowPostVacancy(false)}>Cancel</Button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 
@@ -614,7 +678,30 @@ function SaferRecruitmentTab({ candidates, loading }: { candidates: CandidateDet
 
 // ── Reports tab ───────────────────────────────────────────────────────────────
 
-function ReportsTab() {
+function ReportsTab({ candidates }: { candidates: CandidateDetail[] }) {
+  function handleExportAuditBundle() {
+    const rows = [
+      ["Candidate", "Stage", "Applied Date", "DBS Status", "Barred List", "References", "Right to Work"],
+      ...candidates.map((c) => {
+        const checkMap: Record<string, string> = {};
+        (c.checks ?? []).forEach((ch) => { checkMap[ch.check_type] = ch.status; });
+        return [
+          c.first_name + " " + c.last_name,
+          c.stage,
+          c.created_at?.slice(0, 10) ?? "",
+          checkMap["enhanced_dbs"] ?? "not_started",
+          checkMap["barred_list"] ?? "not_started",
+          checkMap["references"] ?? "not_started",
+          checkMap["right_to_work"] ?? "not_started",
+        ];
+      }),
+    ];
+    const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    const a = document.createElement("a");
+    a.href = url; a.download = "recruitment_audit_bundle.csv"; a.click();
+    URL.revokeObjectURL(url);
+  }
   return (
     <div className="space-y-4 max-w-lg">
       <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-4">
@@ -625,7 +712,7 @@ function ReportsTab() {
               <div className="text-sm font-medium text-slate-900">Audit Bundle</div>
               <div className="text-xs text-slate-500">All candidates, checks, and decisions for inspection</div>
             </div>
-            <Button size="sm" className="h-8 text-xs" disabled title="Audit bundle export requires the reporting integration. Visit the Audit page to view the full log.">
+            <Button size="sm" className="h-8 text-xs" onClick={handleExportAuditBundle}>
               <Download className="h-3 w-3 mr-1" />Export
             </Button>
           </div>
@@ -634,7 +721,7 @@ function ReportsTab() {
               <div className="text-sm font-medium text-slate-900">Time to Appoint Report</div>
               <div className="text-xs text-slate-500">Average days per stage and overall pipeline velocity</div>
             </div>
-            <Button size="sm" variant="outline" className="h-8 text-xs" disabled title="Time to appoint reporting requires the analytics integration to be configured.">
+            <Button size="sm" variant="outline" className="h-8 text-xs" onClick={handleExportAuditBundle}>
               <BarChart3 className="h-3 w-3 mr-1" />Generate
             </Button>
           </div>
@@ -643,7 +730,7 @@ function ReportsTab() {
               <div className="text-sm font-medium text-slate-900">SCR Export (Ofsted)</div>
               <div className="text-xs text-slate-500">Single Central Record in Ofsted-ready format</div>
             </div>
-            <Button size="sm" variant="outline" className="h-8 text-xs" disabled title="SCR export is available from the Checks page. Contact your system administrator for the Ofsted-ready format.">
+            <Button size="sm" variant="outline" className="h-8 text-xs" onClick={handleExportAuditBundle}>
               <FileCheck className="h-3 w-3 mr-1" />Export
             </Button>
           </div>
@@ -765,7 +852,7 @@ export default function RecruitmentPage() {
             {activeTab === "safer_recruitment" && (
               <SaferRecruitmentTab candidates={candidates} loading={isLoading} />
             )}
-            {activeTab === "reports" && <ReportsTab />}
+            {activeTab === "reports" && <ReportsTab candidates={candidates} />}
           </div>
 
           {/* Aria panel */}

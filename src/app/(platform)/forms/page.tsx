@@ -14,7 +14,7 @@ import { Avatar } from "@/components/ui/avatar";
 import {
   Search, FileText, RotateCcw, Clock, CheckCircle2, XCircle,
   AlertTriangle, Archive, ChevronRight, Heart, CalendarDays,
-  Pencil, Loader2, AlertCircle,
+  Pencil, Loader2, AlertCircle, BookOpen,
 } from "lucide-react";
 import { useForms } from "@/hooks/use-forms";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -109,6 +109,17 @@ export default function FormsPage() {
       title="Care Forms"
       subtitle={`${filtered.length} form${filtered.length !== 1 ? "s" : ""} ${hasFilters ? "(filtered)" : ""}`}
       quickCreateContext={FORMS_QUICK_CREATE_CONTEXT}
+      actions={
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => router.push("/forms/templates")}
+          className="gap-2"
+        >
+          <BookOpen className="h-4 w-4" />
+          Template Library
+        </Button>
+      }
     >
       <div className="space-y-5 animate-fade-in">
 

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PageShell } from "@/components/layout/page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -647,15 +648,15 @@ function CertificatesTab({ data }: { data: BuildingsData }) {
                   </div>
                   <div className="mt-3 flex items-center justify-between gap-3">
                     <div className="text-[10px] text-slate-400 italic">{required_by}</div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs shrink-0"
-                      disabled
-                      title="Certificate uploads are managed in the Documents section."
-                    >
-                      <Upload className="h-3 w-3 mr-1" />Upload Certificate
-                    </Button>
+                    <Link href="/documents">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs shrink-0"
+                      >
+                        <Upload className="h-3 w-3 mr-1" />Upload Certificate
+                      </Button>
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -669,7 +670,7 @@ function CertificatesTab({ data }: { data: BuildingsData }) {
 
 // ── Tab: Hazards & Maintenance ────────────────────────────────────────────────
 
-function HazardsTab({ data }: { data: BuildingsData }) {
+function HazardsTab({ data, onMarkResolved }: { data: BuildingsData; onMarkResolved: (id: string) => void }) {
   const openHazards = [...data.failed, ...data.overdue].filter((c) =>
     c.action_required || c.status === "overdue"
   );
@@ -755,8 +756,7 @@ function HazardsTab({ data }: { data: BuildingsData }) {
                       <Button
                         size="sm"
                         className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700"
-                        disabled
-                        title="Mark hazards as resolved from the Maintenance page after completing the remedial work."
+                        onClick={() => onMarkResolved(hazard.id)}
                       >
                         <CheckCircle2 className="h-3 w-3 mr-1" />Mark Resolved
                       </Button>
@@ -820,6 +820,29 @@ export default function BuildingsPage() {
       }
     },
   });
+
+  const resolveHazard = useMutation({
+    mutationFn: async (checkId: string) => {
+      const res = await fetch("/api/v1/buildings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          building_id: "bld_oak_main",
+          check_type: "hazard_resolution",
+          result: "pass",
+          linked_check_id: checkId,
+          notes: "Hazard marked as resolved by manager.",
+          status: "completed",
+        }),
+      });
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["buildings"] }),
+  });
+
+  function handleMarkResolved(id: string) {
+    resolveHazard.mutate(id);
+  }
 
   const TABS = [
     { id: "dashboard" as const, label: "Dashboard", icon: Building2 },
@@ -886,7 +909,7 @@ export default function BuildingsPage() {
             {tab === "dashboard" && <DashboardTab data={raw} onAddCheck={() => setShowAddCheck(true)} />}
             {tab === "history" && <CheckHistoryTab data={raw} onAddCheck={() => setShowAddCheck(true)} />}
             {tab === "certificates" && <CertificatesTab data={raw} />}
-            {tab === "hazards" && <HazardsTab data={raw} />}
+            {tab === "hazards" && <HazardsTab data={raw} onMarkResolved={handleMarkResolved} />}
           </>
         )}
       </div>

@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -66,21 +67,16 @@ export default function InspectionPage() {
       quickCreateContext={{ module: "inspection", defaultTaskCategory: "inspection", defaultFormType: "review_meeting_notes" }}
       actions={
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled
-            title="Evidence packs are compiled from the Documents section. Visit Documents to prepare your pack."
-          >
-            <Download className="h-3.5 w-3.5 mr-1" />Evidence Pack
-          </Button>
-          <Button
-            size="sm"
-            disabled
-            title="Inspection preparation checklists are available in the Audits section."
-          >
-            Prepare for Inspection
-          </Button>
+          <Link href="/documents?category=inspection">
+            <Button variant="outline" size="sm">
+              <Download className="h-3.5 w-3.5 mr-1" />Evidence Pack
+            </Button>
+          </Link>
+          <Link href="/audits">
+            <Button size="sm">
+              Prepare for Inspection
+            </Button>
+          </Link>
         </div>
       }
     >
@@ -157,15 +153,11 @@ export default function InspectionPage() {
                     </div>
                     <div className="text-xs text-slate-500">{formatDate(insp.date)} · {insp.inspector}</div>
                     <div className="text-xs text-slate-600">{insp.actionsComplete}/{insp.actions} actions completed</div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs"
-                      disabled
-                      title="Inspection reports are stored in the Documents section."
-                    >
-                      <FileText className="h-3 w-3 mr-1" />View report
-                    </Button>
+                    <Link href="/documents">
+                      <Button size="sm" variant="outline" className="h-7 text-xs">
+                        <FileText className="h-3 w-3 mr-1" />View report
+                      </Button>
+                    </Link>
                   </div>
                 ))}
               </div>

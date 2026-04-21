@@ -88,6 +88,25 @@ export default function ChecksPage() {
     return all.filter(c => c.stage === stageFilter);
   }, [data, stageFilter]);
 
+  function handleExportSCR() {
+    const headers = ["Candidate", "Stage", ...CHECK_TYPES.map((t) => t.label)];
+    const rows = candidates.map((c) => [
+      c.first_name + " " + c.last_name,
+      c.stage,
+      ...CHECK_TYPES.map((t) => {
+        const check = (c.checks ?? []).find((ch) => ch.check_type === t.id);
+        return check ? check.status : "not_started";
+      }),
+    ]);
+    const csv = [headers, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `SCR_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   // Build a lookup: candidate_id → check_type → check
   const checkMap = useMemo(() => {
     const map: Record<string, Record<string, RecruitmentCheck>> = {};
@@ -135,7 +154,7 @@ export default function ChecksPage() {
       subtitle="Single Central Record — compliance status for all candidates"
       actions={
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="rounded-xl text-xs" disabled title="SCR grid export is available from the Audit page.">
+          <Button variant="outline" size="sm" className="rounded-xl text-xs" onClick={handleExportSCR}>
             <Download className="h-3.5 w-3.5 mr-1.5" /> Export Grid
           </Button>
           <div className="flex rounded-xl border border-slate-200 overflow-hidden">

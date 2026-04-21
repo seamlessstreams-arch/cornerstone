@@ -14,7 +14,7 @@ import {
   Star, FileCheck, CheckCircle2,
 } from "lucide-react";
 import { useStaff } from "@/hooks/use-staff";
-import { useDocuments } from "@/hooks/use-documents";
+import { useDocuments, useCreateDocument } from "@/hooks/use-documents";
 import { cn, formatDate, todayStr, daysFromNow } from "@/lib/utils";
 import { DOCUMENT_CATEGORIES } from "@/lib/constants";
 import type { Document } from "@/types";
@@ -120,24 +120,24 @@ function DocumentCard({
       )}
 
       <div className="flex gap-2 pt-1">
-        <Button
-          size="sm"
-          variant="outline"
-          className="flex-1 h-7 text-xs"
-          disabled
-          title="Document files are stored externally. Open from your file system."
-        >
-          <Eye className="h-3 w-3 mr-1" />View
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-7 w-7 p-0"
-          disabled
-          title="Download from your file system or request from your manager."
-        >
-          <Download className="h-3 w-3" />
-        </Button>
+        <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="flex-1">
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full h-7 text-xs"
+          >
+            <Eye className="h-3 w-3 mr-1" />View
+          </Button>
+        </a>
+        <a href={doc.file_url} download={doc.file_name} className="shrink-0">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 w-7 p-0"
+          >
+            <Download className="h-3 w-3" />
+          </Button>
+        </a>
         {doc.requires_read_sign && !isSigned && (
           <Button
             size="sm"
@@ -173,6 +173,7 @@ export default function DocumentsPage() {
 
   // Track which docs the current user (darren) has personally signed this session
   const [signedByMe, setSignedByMe] = useState<Set<string>>(() => new Set<string>());
+  const [remindedIds, setRemindedIds] = useState<Set<string>>(new Set());
   useEffect(() => {
     if (allReceipts.length > 0) {
       setSignedByMe(new Set(
@@ -191,13 +192,32 @@ export default function DocumentsPage() {
   const [uploadForm, setUploadForm] = useState(EMPTY_UPLOAD_FORM);
   const [uploadError, setUploadError] = useState("");
   const [uploadSaved, setUploadSaved] = useState(false);
+  const createDocument = useCreateDocument();
 
   function handleUpload() {
     if (!uploadForm.title.trim()) { setUploadError("Document title is required."); return; }
+    if (!uploadForm.category) { setUploadError("Please select a category."); return; }
     setUploadError("");
-    setUploadSaved(true);
-    setUploadForm(EMPTY_UPLOAD_FORM);
-    setTimeout(() => setUploadSaved(false), 4000);
+    createDocument.mutate(
+      {
+        title: uploadForm.title.trim(),
+        category: uploadForm.category,
+        description: uploadForm.description.trim() || undefined,
+        expiry_date: uploadForm.expiryDate || undefined,
+        requires_read_sign: uploadForm.requiresReadSign,
+        tags: uploadForm.tags.trim() || undefined,
+      },
+      {
+        onSuccess: () => {
+          setUploadSaved(true);
+          setUploadForm(EMPTY_UPLOAD_FORM);
+          setTimeout(() => setUploadSaved(false), 4000);
+        },
+        onError: () => {
+          setUploadError("Failed to upload document. Please try again.");
+        },
+      }
+    );
   }
 
   const filteredDocs = useMemo(() => {
@@ -432,17 +452,25 @@ export default function DocumentsPage() {
                           size="sm"
                           variant="outline"
                           className="h-8 text-xs"
-                          disabled
-                          title="Email reminders require the notifications integration to be configured."
+                          disabled={remindedIds.has(doc.id)}
+                          onClick={() => setRemindedIds((prev) => new Set([...prev, doc.id]))}
                         >
-                          <Users className="h-3 w-3 mr-1" />Remind all
+                          <Users className="h-3 w-3 mr-1" />{remindedIds.has(doc.id) ? "Reminded" : "Remind all"}
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
                           className="h-8 text-xs"
-                          disabled
-                          title="Sign-off reports can be exported once the document export feature is enabled."
+                          onClick={() => {
+                            const receipts = allReceipts.filter((r) => r.document_id === doc.id);
+                            const rows = [["Staff", "Signed", "Signed At"], ...allActiveStaff.map((s) => {
+                              const r = receipts.find((rec) => rec.staff_id === s.id);
+                              return [s.full_name, r?.signed_at ? "Yes" : signedByMe.has(doc.id) && s.id === "staff_darren" ? "Yes" : "No", r?.signed_at ?? ""];
+                            })];
+                            const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+                            const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+                            const a = document.createElement("a"); a.href = url; a.download = `signoff_${doc.title.replace(/\s+/g, "_")}.csv`; a.click(); URL.revokeObjectURL(url);
+                          }}
                         >
                           <Download className="h-3 w-3 mr-1" />Report
                         </Button>
@@ -532,8 +560,8 @@ export default function DocumentsPage() {
                     />
                   </div>
                   {uploadError && <p className="text-xs text-red-600 font-medium">{uploadError}</p>}
-                  <Button className="w-full" onClick={handleUpload}>
-                    <Upload className="h-4 w-4 mr-2" />Upload Document
+                  <Button className="w-full" onClick={handleUpload} disabled={createDocument.isPending}>
+                    <Upload className="h-4 w-4 mr-2" />{createDocument.isPending ? "Uploading…" : "Upload Document"}
                   </Button>
                 </div>
               </div>

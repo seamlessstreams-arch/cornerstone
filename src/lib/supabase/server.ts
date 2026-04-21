@@ -1,12 +1,43 @@
-// Server-side Supabase client
-// Uses service role key for privileged operations
-// Only import this in Server Components, API routes, and Server Actions
+import { cookies } from "next/headers";
+import { createClient } from "@supabase/supabase-js";
+import { createServerClient as createSsrServerClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { supabaseEnv } from "@/lib/supabase/env";
 
-export async function createServerClient() {
-  // When Supabase is enabled, replace with real client:
-  // const { createClient } = await import("@supabase/supabase-js");
-  // return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+export async function createServerClient(): Promise<SupabaseClient> {
+  const cookieStore = await cookies();
 
-  // For now, return null — data layer handles this
-  return null;
+  return createSsrServerClient(
+    supabaseEnv.NEXT_PUBLIC_SUPABASE_URL,
+    supabaseEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
+          } catch {
+            // Cookie writes are not always allowed in every server context.
+          }
+        },
+      },
+    }
+  );
+}
+
+export function createServiceRoleClient(): SupabaseClient {
+  return createClient(
+    supabaseEnv.NEXT_PUBLIC_SUPABASE_URL,
+    supabaseEnv.SUPABASE_SERVICE_ROLE_KEY,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    }
+  );
 }

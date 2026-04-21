@@ -8,6 +8,7 @@
 
 import React, { useState, use } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,13 +17,14 @@ import {
   ArrowLeft, AlertTriangle, Pill,
   GraduationCap, Phone, Mail, User, MapPin, FileText,
   CheckSquare, Activity, Loader2, AlertCircle,
-  ChevronRight,
+  ChevronRight, UserX, Clock, Shield, Plus, X,
 } from "lucide-react";
-import { useYoungPerson } from "@/hooks/use-young-people";
+import { useYoungPerson, useCreateChronologyEntry, useCreateMissingEpisode } from "@/hooks/use-young-people";
 import { cn, formatDate, formatRelative } from "@/lib/utils";
 import { getStaffName } from "@/lib/seed-data";
 import { INCIDENT_TYPE_LABELS } from "@/lib/constants";
 import type { Incident, Task, Medication, CareForm } from "@/types";
+import type { MissingEpisode } from "@/types/extended";
 
 // ── Severity badge config ─────────────────────────────────────────────────────
 const SEV_BADGE: Record<string, string> = {
@@ -57,7 +59,15 @@ function InfoRow({ label, value, icon: Icon }: { label: string; value: React.Rea
 }
 
 // ── Tab types ─────────────────────────────────────────────────────────────────
-type ProfileTab = "overview" | "incidents" | "tasks" | "medications" | "chronology" | "forms";
+type ProfileTab = "overview" | "incidents" | "tasks" | "medications" | "chronology" | "forms" | "missing";
+
+// ── Missing risk badge config ─────────────────────────────────────────────────
+const MISSING_RISK: Record<string, string> = {
+  low:      "bg-slate-100 text-slate-700",
+  medium:   "bg-amber-100 text-amber-800",
+  high:     "bg-orange-100 text-orange-800",
+  critical: "bg-red-100 text-red-800",
+};
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
@@ -65,6 +75,63 @@ export default function YoungPersonPage({ params }: { params: Promise<{ id: stri
   const { id } = use(params);
   const router = useRouter();
   const [tab, setTab] = useState<ProfileTab>("overview");
+
+  // Chronology form state
+  const [showChronForm, setShowChronForm] = useState(false);
+  const [chronCategory, setChronCategory] = useState("other");
+  const [chronSignificance, setChronSignificance] = useState<"routine" | "significant" | "critical">("routine");
+  const [chronTitle, setChronTitle] = useState("");
+  const [chronDescription, setChronDescription] = useState("");
+
+  const createChronologyEntry = useCreateChronologyEntry(id);
+  const createMissingEpisode = useCreateMissingEpisode(id);
+
+  // Missing episode form state
+  const [showMfcForm, setShowMfcForm] = useState(false);
+  const [mfcDate, setMfcDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [mfcTime, setMfcTime] = useState(() => new Date().toTimeString().slice(0, 5));
+  const [mfcRisk, setMfcRisk] = useState<"low" | "medium" | "high" | "critical">("medium");
+  const [mfcLocation, setMfcLocation] = useState("");
+  const [mfcPolice, setMfcPolice] = useState(false);
+  const [mfcPoliceRef, setMfcPoliceRef] = useState("");
+  const [mfcLA, setMfcLA] = useState(true);
+  const [mfcCSRisk, setMfcCSRisk] = useState(false);
+  const [mfcPatternNotes, setMfcPatternNotes] = useState("");
+
+  async function submitMissingEpisode() {
+    if (!mfcLocation.trim()) return;
+    await createMissingEpisode.mutateAsync({
+      date_missing: mfcDate,
+      time_missing: mfcTime,
+      risk_level: mfcRisk,
+      location_last_seen: mfcLocation.trim(),
+      reported_to_police: mfcPolice,
+      police_reference: mfcPolice ? mfcPoliceRef || null : null,
+      reported_to_la: mfcLA,
+      contextual_safeguarding_risk: mfcCSRisk,
+      pattern_notes: mfcPatternNotes.trim() || null,
+    });
+    setMfcLocation("");
+    setMfcPolice(false);
+    setMfcPoliceRef("");
+    setMfcPatternNotes("");
+    setShowMfcForm(false);
+  }
+
+  async function submitChronologyEntry() {
+    if (!chronTitle.trim()) return;
+    await createChronologyEntry.mutateAsync({
+      category: chronCategory,
+      significance: chronSignificance,
+      title: chronTitle.trim(),
+      description: chronDescription.trim() || undefined,
+    });
+    setChronTitle("");
+    setChronDescription("");
+    setChronCategory("other");
+    setChronSignificance("routine");
+    setShowChronForm(false);
+  }
 
   const query = useYoungPerson(id);
   const yp      = query.data?.data;
@@ -105,6 +172,7 @@ export default function YoungPersonPage({ params }: { params: Promise<{ id: stri
     { id: "tasks",       label: "Tasks",       icon: CheckSquare,   count: meta?.active_tasks    },
     { id: "medications", label: "Medication",  icon: Pill,          count: related?.medications.length },
     { id: "chronology",  label: "Chronology",  icon: Activity,      count: (related?.chronology as unknown[])?.length },
+    { id: "missing",     label: "Missing",     icon: UserX,         count: (related?.missing_episodes as unknown[])?.length },
     { id: "forms",       label: "Forms",       icon: FileText,      count: related?.care_forms.length },
   ];
 
@@ -114,9 +182,14 @@ export default function YoungPersonPage({ params }: { params: Promise<{ id: stri
       subtitle={`${yp.legal_status} · ${yp.local_authority} · Age ${yp.age}`}
       showQuickCreate={false}
       actions={
-        <Button variant="outline" size="sm" onClick={() => router.push("/young-people")}>
-          <ArrowLeft className="h-3.5 w-3.5 mr-1" />All Young People
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/young-people/${id}/intelligence`}>Intelligence</Link>
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => router.push("/young-people")}>
+            <ArrowLeft className="h-3.5 w-3.5 mr-1" />All Young People
+          </Button>
+        </div>
       }
     >
       <div className="space-y-5 animate-fade-in">
@@ -459,6 +532,89 @@ export default function YoungPersonPage({ params }: { params: Promise<{ id: stri
         {/* ── Chronology tab ────────────────────────────────────────────────── */}
         {tab === "chronology" && (
           <div className="space-y-2">
+            {/* Add entry toggle */}
+            <div className="flex justify-end">
+              {!showChronForm ? (
+                <Button size="sm" variant="outline" onClick={() => setShowChronForm(true)}>
+                  <Plus className="h-3.5 w-3.5 mr-1" />Add Entry
+                </Button>
+              ) : (
+                <Button size="sm" variant="ghost" onClick={() => setShowChronForm(false)}>
+                  <X className="h-3.5 w-3.5 mr-1" />Cancel
+                </Button>
+              )}
+            </div>
+
+            {/* Inline add form */}
+            {showChronForm && (
+              <div className="rounded-2xl border bg-white p-4 space-y-3">
+                <div className="text-sm font-semibold text-slate-700">New Chronology Entry</div>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500">Category</label>
+                    <select
+                      className="h-9 w-full rounded-md border bg-white px-3 text-sm"
+                      value={chronCategory}
+                      onChange={(e) => setChronCategory(e.target.value)}
+                    >
+                      <option value="placement">Placement</option>
+                      <option value="incident">Incident</option>
+                      <option value="missing">Missing from Care</option>
+                      <option value="safeguarding">Safeguarding</option>
+                      <option value="health">Health</option>
+                      <option value="education">Education</option>
+                      <option value="contact">Contact</option>
+                      <option value="legal">Legal</option>
+                      <option value="review">Review</option>
+                      <option value="behaviour">Behaviour</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500">Significance</label>
+                    <select
+                      className="h-9 w-full rounded-md border bg-white px-3 text-sm"
+                      value={chronSignificance}
+                      onChange={(e) => setChronSignificance(e.target.value as typeof chronSignificance)}
+                    >
+                      <option value="routine">Routine</option>
+                      <option value="significant">Significant</option>
+                      <option value="critical">Critical</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500">Title *</label>
+                  <input
+                    className="h-9 w-full rounded-md border px-3 text-sm"
+                    placeholder="Brief title for this entry"
+                    value={chronTitle}
+                    onChange={(e) => setChronTitle(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500">Details</label>
+                  <textarea
+                    className="w-full rounded-md border p-2 text-sm h-24 resize-none"
+                    placeholder="Full description of the event, context, and any actions taken…"
+                    value={chronDescription}
+                    onChange={(e) => setChronDescription(e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={submitChronologyEntry}
+                    disabled={!chronTitle.trim() || createChronologyEntry.isPending}
+                  >
+                    Save Entry
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setShowChronForm(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
             {!(related?.chronology as unknown[])?.length && (
               <div className="rounded-2xl border-2 border-dashed border-slate-200 p-10 text-center">
                 <Activity className="h-8 w-8 text-slate-300 mx-auto mb-2" />
@@ -489,6 +645,154 @@ export default function YoungPersonPage({ params }: { params: Promise<{ id: stri
                 </div>
                 <p className="text-xs text-slate-600 mt-2 leading-relaxed">{entry.description}</p>
                 <div className="text-[10px] text-slate-400 mt-2">Recorded by {getStaffName(entry.recorded_by)}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Missing Episodes tab ──────────────────────────────────────────── */}
+        {tab === "missing" && (
+          <div className="space-y-3">
+            {/* Log new episode button */}
+            <div className="flex justify-end">
+              {!showMfcForm ? (
+                <Button size="sm" variant="outline" onClick={() => setShowMfcForm(true)}>
+                  <Plus className="h-3.5 w-3.5 mr-1" />Log Missing Episode
+                </Button>
+              ) : (
+                <Button size="sm" variant="ghost" onClick={() => setShowMfcForm(false)}>
+                  <X className="h-3.5 w-3.5 mr-1" />Cancel
+                </Button>
+              )}
+            </div>
+
+            {/* Inline log form */}
+            {showMfcForm && (
+              <div className="rounded-2xl border bg-white p-4 space-y-3">
+                <div className="text-sm font-semibold text-slate-700">Log Missing from Care Episode</div>
+                <div className="grid sm:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500">Date missing *</label>
+                    <input type="date" className="h-9 w-full rounded-md border px-3 text-sm" value={mfcDate} onChange={(e) => setMfcDate(e.target.value)} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500">Time missing *</label>
+                    <input type="time" className="h-9 w-full rounded-md border px-3 text-sm" value={mfcTime} onChange={(e) => setMfcTime(e.target.value)} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500">Risk level *</label>
+                    <select className="h-9 w-full rounded-md border bg-white px-3 text-sm" value={mfcRisk} onChange={(e) => setMfcRisk(e.target.value as typeof mfcRisk)}>
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="critical">Critical</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500">Last known location *</label>
+                  <input className="h-9 w-full rounded-md border px-3 text-sm" placeholder="Where were they last seen?" value={mfcLocation} onChange={(e) => setMfcLocation(e.target.value)} />
+                </div>
+                <div className="flex flex-wrap gap-4 text-sm">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" className="rounded" checked={mfcPolice} onChange={(e) => setMfcPolice(e.target.checked)} />
+                    Reported to police
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" className="rounded" checked={mfcLA} onChange={(e) => setMfcLA(e.target.checked)} />
+                    LA notified
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" className="rounded" checked={mfcCSRisk} onChange={(e) => setMfcCSRisk(e.target.checked)} />
+                    Contextual safeguarding risk
+                  </label>
+                </div>
+                {mfcPolice && (
+                  <input className="h-9 w-full rounded-md border px-3 text-sm" placeholder="Police reference number (optional)" value={mfcPoliceRef} onChange={(e) => setMfcPoliceRef(e.target.value)} />
+                )}
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500">Pattern notes (optional)</label>
+                  <textarea className="w-full rounded-md border p-2 text-sm h-16 resize-none" placeholder="Any patterns or context…" value={mfcPatternNotes} onChange={(e) => setMfcPatternNotes(e.target.value)} />
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={submitMissingEpisode} disabled={!mfcLocation.trim() || createMissingEpisode.isPending}>
+                    Log Episode
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setShowMfcForm(false)}>Cancel</Button>
+                </div>
+              </div>
+            )}
+            {!(related?.missing_episodes as unknown[])?.length && (
+              <div className="rounded-2xl border-2 border-dashed border-slate-200 p-10 text-center">
+                <UserX className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                <div className="text-sm text-slate-500">No missing from care episodes recorded</div>
+              </div>
+            )}
+            {(related?.missing_episodes as MissingEpisode[])?.map((ep) => (
+              <div
+                key={ep.id}
+                className={cn(
+                  "rounded-2xl border bg-white p-4 border-l-4",
+                  ep.risk_level === "critical" ? "border-l-red-500" :
+                  ep.risk_level === "high" ? "border-l-orange-400" :
+                  ep.risk_level === "medium" ? "border-l-amber-400" : "border-l-slate-300"
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-bold text-slate-900">{ep.reference}</span>
+                      <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize", MISSING_RISK[ep.risk_level])}>
+                        {ep.risk_level} risk
+                      </span>
+                      <Badge
+                        variant={ep.status === "active" ? "destructive" : ep.status === "returned" ? "success" : "secondary"}
+                        className="text-[9px] rounded-full capitalize"
+                      >
+                        {ep.status}
+                      </Badge>
+                      {ep.contextual_safeguarding_risk && (
+                        <Badge variant="warning" className="text-[9px] rounded-full gap-0.5">
+                          <Shield className="h-2.5 w-2.5" />CSE/CE risk
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="mt-2 grid sm:grid-cols-2 gap-x-6 gap-y-1 text-xs">
+                      <div><span className="text-slate-400">Missing since: </span><span className="font-medium text-slate-700">{formatDate(ep.date_missing)} {ep.time_missing && `at ${ep.time_missing}`}</span></div>
+                      {ep.date_returned && (
+                        <div><span className="text-slate-400">Returned: </span><span className="font-medium text-slate-700">{formatDate(ep.date_returned)}{ep.time_returned && ` at ${ep.time_returned}`}</span></div>
+                      )}
+                      {ep.duration_hours !== null && (
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3 text-slate-400" />
+                          <span className="text-slate-400">Duration: </span>
+                          <span className="font-medium text-slate-700">{ep.duration_hours < 24 ? `${ep.duration_hours}h` : `${Math.round(ep.duration_hours / 24)}d ${ep.duration_hours % 24}h`}</span>
+                        </div>
+                      )}
+                      <div><span className="text-slate-400">Last seen: </span><span className="font-medium text-slate-700">{ep.location_last_seen}</span></div>
+                      {ep.reported_to_police && (
+                        <div><span className="text-slate-400">Police ref: </span><span className="font-medium text-slate-700">{ep.police_reference ?? "Reported"}</span></div>
+                      )}
+                      {ep.reported_to_la && (
+                        <div><span className="text-slate-400">LA notified: </span><span className="font-medium text-emerald-700">Yes</span></div>
+                      )}
+                    </div>
+                    {ep.pattern_notes && (
+                      <div className="mt-2 rounded-lg bg-amber-50 border border-amber-100 px-3 py-2 text-xs text-amber-800">
+                        <strong>Pattern: </strong>{ep.pattern_notes}
+                      </div>
+                    )}
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <div className={cn(
+                      "flex items-center gap-1 text-xs rounded-full px-2 py-1",
+                      ep.return_interview_completed ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
+                    )}>
+                      <UserX className="h-3 w-3" />
+                      {ep.return_interview_completed ? "Interview done" : "No interview yet"}
+                    </div>
+                  </div>
+                </div>
               </div>
             ))}
           </div>

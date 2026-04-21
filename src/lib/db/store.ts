@@ -19,6 +19,15 @@ import type {
   TrainingRecord, Home, CareForm, Supervision,
 } from "@/types";
 import type {
+  ActionEffectivenessReview,
+  AutomationLog,
+  ChildVoiceEntry,
+  InterventionRecord,
+  PatternSignal,
+  PracticeBankEntry,
+  TrustedAdultLink,
+} from "@/types/intelligence";
+import type {
   Building, BuildingCheck, Vehicle, VehicleCheck,
   MissingEpisode, ChronologyEntry, HandoverEntry,
   Notification, TimeSavedEntry,
@@ -71,6 +80,13 @@ const store = {
   expenses: [] as Expense[],
   audits: [] as Audit[],
   maintenance: [] as MaintenanceItem[],
+  interventions: [] as InterventionRecord[],
+  trustedAdults: [] as TrustedAdultLink[],
+  practiceBank: [] as PracticeBankEntry[],
+  childVoice: [] as ChildVoiceEntry[],
+  patternAlerts: [] as PatternSignal[],
+  actionEffectivenessReviews: [] as ActionEffectivenessReview[],
+  automationLogs: [] as AutomationLog[],
 };
 
 // Seed missing episodes
@@ -1163,6 +1179,177 @@ store.maintenance = [
   },
 ];
 
+// Seed intelligence data
+store.interventions = [
+  {
+    id: "intv_001",
+    child_id: "yp_alex",
+    title: "Pre-evening regulation check-in",
+    why_now: "Missing episodes cluster in late evening windows.",
+    intended_outcome: "Reduce evening absences and increase proactive check-ins.",
+    started_on: "2026-04-10",
+    review_date: "2026-04-24",
+    agreed_by: "Darren Laville",
+    owner_id: "staff_edward",
+    status: "active",
+    impact_summary: null,
+    continue_decision: null,
+    linked_record_ids: ["inc_001", "mfc_003"],
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "intv_002",
+    child_id: "yp_casey",
+    title: "Morning medication motivational script",
+    why_now: "Repeated morning refusal and delayed medication administration.",
+    intended_outcome: "Improve medication adherence and reduce refusal events.",
+    started_on: "2026-04-13",
+    review_date: "2026-04-27",
+    agreed_by: "Ryan Forsythe",
+    owner_id: "staff_chervelle",
+    status: "review_due",
+    impact_summary: "Refusal reduced from daily to one event in current week.",
+    continue_decision: "adapt",
+    linked_record_ids: ["inc_002", "mar_003"],
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
+store.trustedAdults = [
+  {
+    id: "ta_001",
+    child_id: "yp_alex",
+    staff_id: "staff_edward",
+    relationship_type: "regulating",
+    confidence: "high",
+    notes: "Alex seeks Edward when distressed after community contact.",
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "ta_002",
+    child_id: "yp_casey",
+    staff_id: "staff_chervelle",
+    relationship_type: "preferred",
+    confidence: "high",
+    notes: "Casey consistently requests Chervelle for difficult conversations.",
+    updated_at: new Date().toISOString(),
+  },
+];
+
+store.practiceBank = [
+  {
+    id: "pb_001",
+    child_id: "yp_alex",
+    category: "deescalation",
+    title: "Walk-and-talk de-escalation",
+    details: "When dysregulated, Alex responds better to side-by-side walking conversation than direct questioning.",
+    evidence_refs: ["log_001", "inc_004"],
+    created_by: "staff_edward",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "pb_002",
+    child_id: "yp_casey",
+    category: "what_helps",
+    title: "Advance warning before med prompts",
+    details: "Casey engages better if reminded 10 minutes before medication time with choice language.",
+    evidence_refs: ["inc_002", "mar_003"],
+    created_by: "staff_chervelle",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
+store.childVoice = [
+  {
+    id: "voice_001",
+    child_id: "yp_alex",
+    said: "I need more warning when contact plans change.",
+    adult_response: "Team agreed same-day check-ins before and after contact changes.",
+    outcome: "Fewer high-conflict evenings in current week.",
+    source: "key_work",
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "voice_002",
+    child_id: "yp_casey",
+    said: "Mornings feel rushed and I panic when everyone asks at once.",
+    adult_response: "One staff lead now coordinates mornings with a quieter routine.",
+    outcome: "Reduced refusal incidents and calmer starts.",
+    source: "daily_log",
+    created_at: new Date().toISOString(),
+  },
+];
+
+store.patternAlerts = [
+  {
+    id: "sig_seed_001",
+    childId: "yp_alex",
+    title: "Repeated evening risk window",
+    prompt: "There is a repeated pattern of missing episodes in evening windows over the last 8 weeks.",
+    confidence: "high",
+    evidenceRefs: ["MFC-2026-002", "MFC-2026-003"],
+    periodDays: 56,
+    createdAt: new Date().toISOString(),
+  },
+];
+
+store.actionEffectivenessReviews = [
+  {
+    id: "aer_001",
+    action_id: "task_007",
+    child_id: "yp_alex",
+    what_changed: "Placement risk plan now includes pre-evening checks and trusted-adult response.",
+    evidence_after: "Two weeks with reduced escalation calls and improved evening engagement logs.",
+    effectiveness: "partially_worked",
+    decision: "continue",
+    reviewed_by: "staff_darren",
+    reviewed_at: new Date().toISOString(),
+  },
+];
+
+store.automationLogs = [
+  {
+    id: "alog_001",
+    automation_type: "pattern_task",
+    source_id: "sig_seed_001",
+    source_type: "pattern_alert",
+    generated_entity_id: "task_007",
+    generated_entity_type: "task",
+    title: "Auto-created review task for 'Repeated evening risk window' (high confidence)",
+    initiated_by: "staff_darren",
+    metadata: { confidence: "high", child_id: "yp_alex", decision_rationale: "High-confidence pattern required immediate oversight task." },
+    created_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: "alog_002",
+    automation_type: "review_task",
+    source_id: "aer_001",
+    source_type: "action_review",
+    generated_entity_id: "task_008",
+    generated_entity_type: "task",
+    title: "Follow-up intervention created from action effectiveness review aer_001",
+    initiated_by: "staff_darren",
+    metadata: { child_id: "yp_alex", decision_rationale: "Decision: continue. Follow-up required within 14 days.", manual_review_needed: false },
+    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: "alog_003",
+    automation_type: "alert_reviewed",
+    source_id: "sig_seed_001",
+    source_type: "pattern_alert",
+    generated_entity_id: null,
+    generated_entity_type: null,
+    title: "Pattern alert 'Repeated evening risk window' marked as reviewed",
+    initiated_by: "staff_darren",
+    metadata: { confidence: "high", child_id: "yp_alex" },
+    created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+];
+
 // ── CRUD helpers ──────────────────────────────────────────────────────────────
 
 export function getStore() { return store; }
@@ -1173,6 +1360,16 @@ export const db = {
     findAll: () => store.staff,
     findById: (id: string) => store.staff.find((s) => s.id === id),
     findActive: () => store.staff.filter((s) => s.is_active),
+    create: (data: Partial<StaffMember> & { first_name: string; last_name: string; role: string }) => {
+      const newStaff: StaffMember = {
+        id: `staff_${Date.now()}`,
+        full_name: `${data.first_name} ${data.last_name}`,
+        is_active: true,
+        ...data,
+      } as StaffMember;
+      store.staff.push(newStaff);
+      return newStaff;
+    },
   },
 
   // ── Young People ──────────────────────────────────────────────────────────
@@ -1303,6 +1500,27 @@ export const db = {
     findAll: () => store.medications,
     findActive: () => store.medications.filter((m) => m.is_active),
     findByChild: (childId: string) => store.medications.filter((m) => m.child_id === childId && m.is_active),
+    create: (data: Partial<Medication> & { child_id: string; name: string; type: string }) => {
+      const now = new Date().toISOString();
+      const med: Medication = {
+        id: `med_${Date.now()}`,
+        is_active: true,
+        stock_count: null,
+        stock_last_checked: null,
+        side_effects: null,
+        special_instructions: null,
+        pharmacy: null,
+        end_date: null,
+        home_id: "home_oak",
+        created_at: now,
+        updated_at: now,
+        created_by: "staff_darren",
+        updated_by: "staff_darren",
+        ...data,
+      } as Medication;
+      store.medications.push(med);
+      return med;
+    },
   },
   medicationAdministrations: {
     findAll: () => store.medicationAdministrations,
@@ -1413,6 +1631,21 @@ export const db = {
       const t = todayStr();
       return store.leaveRequests.filter((l) => l.status === "approved" && l.start_date <= t && l.end_date >= t);
     },
+    create: (data: Partial<LeaveRequest> & { staff_id: string; leave_type: string; start_date: string; end_date: string; total_days: number }) => {
+      const now = new Date().toISOString();
+      const req: LeaveRequest = {
+        id: `leave_${Date.now()}`,
+        status: "pending",
+        home_id: "home_oak",
+        created_at: now,
+        updated_at: now,
+        created_by: "staff_darren",
+        updated_by: "staff_darren",
+        ...data,
+      } as LeaveRequest;
+      store.leaveRequests.push(req);
+      return req;
+    },
   },
 
   // ── Shifts ────────────────────────────────────────────────────────────────
@@ -1420,6 +1653,29 @@ export const db = {
     findAll: () => store.shifts,
     findToday: () => store.shifts.filter((s) => s.date === todayStr()),
     findOpen: () => store.shifts.filter((s) => s.is_open_shift && s.date >= todayStr()),
+    create: (data: Partial<Shift> & { staff_id: string; date: string; shift_type: string; start_time: string; end_time: string }) => {
+      const now = new Date().toISOString();
+      const shift: Shift = {
+        id: `shift_${Date.now()}`,
+        break_minutes: 30,
+        actual_start: null,
+        actual_end: null,
+        clock_in_at: null,
+        clock_out_at: null,
+        overtime_minutes: 0,
+        notes: null,
+        status: "scheduled",
+        is_open_shift: false,
+        home_id: "home_oak",
+        created_at: now,
+        updated_at: now,
+        created_by: "staff_darren",
+        updated_by: "staff_darren",
+        ...data,
+      } as Shift;
+      store.shifts.push(shift);
+      return shift;
+    },
   },
 
   // ── Safer Recruitment ─────────────────────────────────────────────────────
@@ -1668,6 +1924,117 @@ export const db = {
       if (idx === -1) return null;
       store.maintenance[idx] = { ...store.maintenance[idx], ...data, updated_at: new Date().toISOString() };
       return store.maintenance[idx];
+    },
+  },
+
+  // ── Intelligence ─────────────────────────────────────────────────────────
+  intelligence: {
+    interventions: {
+      findAll: () => store.interventions,
+      findByChild: (childId: string) => store.interventions.filter((i) => i.child_id === childId),
+      findById: (id: string) => store.interventions.find((i) => i.id === id),
+      create: (data: Omit<InterventionRecord, "id" | "created_at" | "updated_at">): InterventionRecord => {
+        const item: InterventionRecord = {
+          ...data,
+          id: generateId("intv"),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        store.interventions.push(item);
+        return item;
+      },
+      update: (id: string, data: Partial<InterventionRecord>): InterventionRecord | null => {
+        const idx = store.interventions.findIndex((i) => i.id === id);
+        if (idx === -1) return null;
+        store.interventions[idx] = { ...store.interventions[idx], ...data, updated_at: new Date().toISOString() };
+        return store.interventions[idx];
+      },
+    },
+    trustedAdults: {
+      findAll: () => store.trustedAdults,
+      findByChild: (childId: string) => store.trustedAdults.filter((i) => i.child_id === childId),
+      create: (data: Omit<TrustedAdultLink, "id" | "updated_at">): TrustedAdultLink => {
+        const item: TrustedAdultLink = {
+          ...data,
+          id: generateId("ta"),
+          updated_at: new Date().toISOString(),
+        };
+        store.trustedAdults.push(item);
+        return item;
+      },
+    },
+    practiceBank: {
+      findAll: () => store.practiceBank,
+      findByChild: (childId: string) => store.practiceBank.filter((i) => i.child_id === childId),
+      create: (data: Omit<PracticeBankEntry, "id" | "created_at" | "updated_at">): PracticeBankEntry => {
+        const item: PracticeBankEntry = {
+          ...data,
+          id: generateId("pb"),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        store.practiceBank.push(item);
+        return item;
+      },
+    },
+    childVoice: {
+      findAll: () => store.childVoice,
+      findByChild: (childId: string) => store.childVoice.filter((i) => i.child_id === childId),
+      create: (data: Omit<ChildVoiceEntry, "id" | "created_at">): ChildVoiceEntry => {
+        const item: ChildVoiceEntry = {
+          ...data,
+          id: generateId("voice"),
+          created_at: new Date().toISOString(),
+        };
+        store.childVoice.push(item);
+        return item;
+      },
+    },
+    patternAlerts: {
+      findAll: () => store.patternAlerts,
+      findActive: () => store.patternAlerts.filter((a) => !a.status || a.status === "active" || a.status === "reviewed"),
+      create: (data: Omit<PatternSignal, "id" | "createdAt">): PatternSignal => {
+        const item: PatternSignal = {
+          ...data,
+          id: generateId("sig"),
+          createdAt: new Date().toISOString(),
+        };
+        store.patternAlerts.push(item);
+        return item;
+      },
+      update: (id: string, data: Partial<Pick<PatternSignal, "status" | "reviewedAt" | "reviewedBy">>): PatternSignal | null => {
+        const idx = store.patternAlerts.findIndex((a) => a.id === id);
+        if (idx === -1) return null;
+        store.patternAlerts[idx] = { ...store.patternAlerts[idx], ...data };
+        return store.patternAlerts[idx];
+      },
+    },
+    actionReviews: {
+      findAll: () => store.actionEffectivenessReviews,
+      findByChild: (childId: string) => store.actionEffectivenessReviews.filter((i) => i.child_id === childId),
+      create: (data: Omit<ActionEffectivenessReview, "id" | "reviewed_at">): ActionEffectivenessReview => {
+        const item: ActionEffectivenessReview = {
+          ...data,
+          id: generateId("aer"),
+          reviewed_at: new Date().toISOString(),
+        };
+        store.actionEffectivenessReviews.push(item);
+        return item;
+      },
+    },
+    automationLogs: {
+      findAll: () => [...store.automationLogs].sort((a, b) => b.created_at.localeCompare(a.created_at)),
+      findByType: (type: AutomationLog["automation_type"]) =>
+        store.automationLogs.filter((l) => l.automation_type === type),
+      create: (data: Omit<AutomationLog, "id" | "created_at">): AutomationLog => {
+        const item: AutomationLog = {
+          ...data,
+          id: generateId("alog"),
+          created_at: new Date().toISOString(),
+        };
+        store.automationLogs.push(item);
+        return item;
+      },
     },
   },
 };

@@ -16,9 +16,11 @@ import {
   MessageSquare, GraduationCap, UserPlus, FileText, ClipboardCheck, Award,
   BarChart3, Receipt, Clock, ChevronDown, ChevronRight,
   PanelLeftClose, PanelLeft, Settings, Building2, Car, Activity,
-  User, Fingerprint, FileCheck, Mail, ChevronUp,
+  User, Fingerprint, FileCheck, Mail, ChevronUp, HardHat, FolderSearch,
+  LayoutList, PieChart, ScanLine, Sparkles,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { AcaciaLogo } from "@/components/branding/acacia-logo";
 import { useAuthContext } from "@/contexts/auth-context";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useSidebarCounts } from "@/hooks/use-sidebar-counts";
@@ -31,7 +33,8 @@ const ICON_MAP: Record<string, React.ElementType> = {
   CheckSquare, Calendar, CalendarDays, ArrowRightLeft, Wrench, Users,
   MessageSquare, GraduationCap, UserPlus, FileText, ClipboardCheck, Award,
   BarChart3, Receipt, Clock, Building2, Car, Activity, User,
-  Fingerprint, FileCheck, Mail,
+  Fingerprint, FileCheck, Mail, HardHat, FolderSearch, LayoutList, PieChart, ScanLine,
+  Sparkles,
 };
 
 interface NavItem {
@@ -41,7 +44,7 @@ interface NavItem {
   /** Static badge (rarely used — prefer badgeKey for live counts) */
   badge?: number;
   /** Key into SidebarCounts — drives live badge from API */
-  badgeKey?: "tasks" | "incidents" | "forms";
+  badgeKey?: "tasks" | "incidents" | "forms" | "alerts";
   /** Module key matched against canAccessModule() */
   module?: string;
 }
@@ -59,6 +62,7 @@ const NAV: NavSection[] = [
       { label: "Staff Dashboard", href: "/dashboard/staff", icon: "User",            module: "dashboard" },
       { label: "My Day",          href: "/dashboard/my-day",icon: "Target",          module: "my-day"    },
       { label: "Reports",         href: "/reports",         icon: "BarChart3",       module: "reports"   },
+      { label: "Intelligence",    href: "/reports/intelligence", icon: "Sparkles",    module: "reports", badgeKey: "alerts" },
     ],
   },
   {
@@ -95,30 +99,36 @@ const NAV: NavSection[] = [
   {
     label: "Safer Recruitment",
     items: [
-      { label: "All Candidates",  href: "/recruitment/candidates",                    icon: "Users",         module: "recruitment" },
-      { label: "Checks & SCR",    href: "/recruitment/safer-recruitment/checks",      icon: "Shield",        module: "recruitment" },
-      { label: "References",      href: "/recruitment/safer-recruitment/references",  icon: "ClipboardCheck",module: "recruitment" },
-      { label: "DBS Tracker",     href: "/recruitment/safer-recruitment/dbs",         icon: "Fingerprint",   module: "recruitment" },
-      { label: "Right to Work",   href: "/recruitment/safer-recruitment/right-to-work",icon: "FileCheck",   module: "recruitment" },
-      { label: "Interviews",      href: "/recruitment/safer-recruitment/interviews",  icon: "MessageSquare", module: "recruitment" },
-      { label: "Offers",          href: "/recruitment/safer-recruitment/offers",      icon: "Award",         module: "recruitment" },
-      { label: "Audit Log",       href: "/recruitment/safer-recruitment/audit",       icon: "Activity",      module: "recruitment" },
-      { label: "Templates",       href: "/recruitment/templates",                     icon: "Mail",          module: "recruitment" },
+      { label: "Recruitment Dashboard", href: "/safer-recruitment/dashboard",         icon: "PieChart",      module: "recruitment" },
+      { label: "Evidence Register",     href: "/safer-recruitment/evidence-register", icon: "FolderSearch",  module: "recruitment" },
+      { label: "All Candidates",        href: "/recruitment/candidates",              icon: "Users",         module: "recruitment" },
+      { label: "Checks & SCR",          href: "/recruitment/safer-recruitment/checks",icon: "Shield",        module: "recruitment" },
+      { label: "References",            href: "/recruitment/safer-recruitment/references",icon: "ClipboardCheck",module: "recruitment" },
+      { label: "DBS Tracker",           href: "/recruitment/safer-recruitment/dbs",  icon: "Fingerprint",   module: "recruitment" },
+      { label: "Right to Work",         href: "/recruitment/safer-recruitment/right-to-work",icon: "FileCheck",module: "recruitment" },
+      { label: "Interviews",            href: "/recruitment/safer-recruitment/interviews",icon: "MessageSquare",module: "recruitment" },
+      { label: "Offers",                href: "/recruitment/safer-recruitment/offers",icon: "Award",         module: "recruitment" },
+      { label: "Audit Log",             href: "/recruitment/safer-recruitment/audit", icon: "Activity",      module: "recruitment" },
+      { label: "Templates",             href: "/recruitment/templates",               icon: "Mail",          module: "recruitment" },
+    ],
+  },
+  {
+    label: "Health & Safety",
+    items: [
+      { label: "H&S Register",       href: "/health-safety/register", icon: "HardHat",     module: "buildings" },
+      { label: "Buildings & H&S",    href: "/buildings",               icon: "Building2",   module: "buildings" },
+      { label: "Vehicles",           href: "/vehicles",                icon: "Car",          module: "vehicles"  },
+      { label: "Maintenance",        href: "/maintenance",             icon: "Wrench",       module: "maintenance" },
     ],
   },
   {
     label: "Compliance",
     items: [
-      { label: "Documents",   href: "/documents",  icon: "FileText",     module: "documents"  },
-      { label: "Audits",      href: "/audits",     icon: "ClipboardCheck",module: "audits"    },
-      { label: "Inspection",  href: "/inspection", icon: "Award",        module: "inspection" },
-    ],
-  },
-  {
-    label: "Property & Vehicles",
-    items: [
-      { label: "Buildings & H&S", href: "/buildings", icon: "Building2", module: "buildings" },
-      { label: "Vehicles",        href: "/vehicles",  icon: "Car",        module: "vehicles"  },
+      { label: "Documents",      href: "/documents",     icon: "FileText",      module: "documents"  },
+      { label: "Audits",         href: "/audits",        icon: "ClipboardCheck",module: "audits"     },
+      { label: "Regulation 45",  href: "/audits/reg45",  icon: "ScanLine",      module: "audits"     },
+      { label: "Inspection",     href: "/inspection",    icon: "Award",         module: "inspection" },
+      { label: "Report Builder", href: "/reports/builder",icon: "LayoutList",   module: "reports"   },
     ],
   },
   {
@@ -235,15 +245,7 @@ export function Sidebar() {
     >
       {/* ── Logo ───────────────────────────────────────────────────────────── */}
       <div className="flex h-16 items-center gap-3 border-b border-slate-100 px-4">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white font-bold text-sm shrink-0">
-          C
-        </div>
-        {!collapsed && (
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-bold text-slate-900 truncate">Cornerstone</div>
-            <div className="text-[10px] text-slate-400 truncate">Oak House</div>
-          </div>
-        )}
+        <AcaciaLogo showText={!collapsed} size={34} className="min-w-0 flex-1" />
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors shrink-0"

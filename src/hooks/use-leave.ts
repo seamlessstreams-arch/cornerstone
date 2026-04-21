@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "./use-api";
 import type { LeaveRequest } from "@/types";
 
@@ -31,5 +31,18 @@ export function useLeave(params?: {
     queryKey: ["leave", params],
     queryFn: () =>
       api.get<{ data: LeaveRequest[]; meta: LeaveMeta }>(`/leave?${query}`),
+  });
+}
+
+export function useCreateLeave() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      staff_id: string;
+      leave_type: string;
+      start_date: string;
+      end_date: string;
+    }) => api.post<{ data: LeaveRequest }>("/leave", data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["leave"] }),
   });
 }

@@ -1007,7 +1007,12 @@ export default function CandidateDetailPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm flex items-center justify-between">
                   <span>Audit Trail</span>
-                  <Button size="sm" variant="outline" className="rounded-xl text-xs" disabled title="Audit trail export is available from the Recruitment Audit page.">
+                  <Button size="sm" variant="outline" className="rounded-xl text-xs" onClick={() => {
+                    const rows = [["Date", "Event", "By"], ...(candidate.audit ?? []).map((e) => [new Date(e.performed_at).toLocaleString(), e.event_type, e.actor ?? ""])];
+                    const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+                    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+                    const a = document.createElement("a"); a.href = url; a.download = `audit_${candidate.first_name}_${candidate.last_name}.csv`; a.click(); URL.revokeObjectURL(url);
+                  }}>
                     <FileText className="h-3.5 w-3.5 mr-1" /> Export
                   </Button>
                 </CardTitle>

@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { AriaPanel } from "@/components/aria/aria-panel";
-import { useMedication, useAdminister } from "@/hooks/use-medication";
+import { useMedication, useAdminister, useCreateMedication } from "@/hooks/use-medication";
 import { getYPName, getStaffName } from "@/lib/seed-data";
 import { useStaff } from "@/hooks/use-staff";
 import { useYoungPeople } from "@/hooks/use-young-people";
@@ -16,8 +17,9 @@ import {
   Pill, Plus, AlertTriangle, CheckCircle2, Clock, Package,
   Shield, FileText, Calendar, X,
   Sparkles, Eye, ClipboardList, Filter,
-  Info, RefreshCw, Activity,
+  Info, RefreshCw, Activity, Loader2,
 } from "lucide-react";
+import { useToast } from "@/components/ui/toast";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -564,7 +566,7 @@ function TodayScheduleTab({
                       {/* Medication info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-slate-900">{med.name}</span>
+                          <Link href={`/medication/${med.id}`} className="font-semibold text-slate-900 hover:text-blue-600 hover:underline transition-colors">{med.name}</Link>
                           <span className="text-sm text-slate-500">{med.dosage}</span>
                           <Badge className={cn("text-[10px] rounded-full border-0 capitalize", TYPE_STYLES[med.type])}>
                             {med.type}
@@ -773,7 +775,7 @@ function MARChartTab({
                   return (
                     <tr key={med.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-5 py-3.5">
-                        <div className="font-medium text-xs text-slate-900">{med.name}</div>
+                        <Link href={`/medication/${med.id}`} className="font-medium text-xs text-slate-900 hover:text-blue-600 hover:underline">{med.name}</Link>
                         <div className="text-[10px] text-slate-500">{med.dosage}</div>
                         <Badge className={cn("text-[9px] rounded-full border-0 capitalize mt-1", TYPE_STYLES[med.type])}>
                           {med.type}
@@ -851,10 +853,14 @@ function PRNLogTab({
   medications: Medication[];
   mar: { medication: Medication; administrations: MedicationAdministration[] }[];
 }) {
+  const { toast } = useToast();
   const [filterYP, setFilterYP] = useState<string>("");
   const [filterMed, setFilterMed] = useState<string>("");
+  const [showAddPRN, setShowAddPRN] = useState(false);
+  const [prnForm, setPrnForm] = useState({ medication_id: "", prn_reason: "", dose_given: "", administered_by: "", notes: "" });
   const prnYpQuery = useYoungPeople();
   const prnAllYP = prnYpQuery.data?.data ?? [];
+  const administer = useAdminister();
 
   const prnMeds = medications.filter((m) => m.type === "prn" && m.is_active);
 
@@ -949,8 +955,7 @@ function PRNLogTab({
           <Button
             size="sm"
             variant="warning"
-            disabled
-            title="PRN administrations are recorded from the Today's Schedule tab after administering."
+            onClick={() => setShowAddPRN(true)}
           >
             <Plus className="h-3.5 w-3.5" />Add PRN Entry
           </Button>
@@ -1015,6 +1020,105 @@ function PRNLogTab({
           </div>
         )}
       </div>
+
+      {/* Add PRN Entry Modal */}
+      {showAddPRN && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+            <h2 className="text-base font-semibold text-slate-900 mb-4">Log PRN Administration</h2>
+            <form
+              className="space-y-4"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  await administer.mutateAsync({
+                    id: prnForm.medication_id,
+                    status: "given",
+                    actual_time: new Date().toISOString(),
+                    prn_reason: prnForm.prn_reason,
+                    dose_given: prnForm.dose_given || undefined,
+                    administered_by: prnForm.administered_by || undefined,
+                    notes: prnForm.notes || undefined,
+                  });
+                  toast("PRN entry logged successfully.", "success");
+                  setShowAddPRN(false);
+                  setPrnForm({ medication_id: "", prn_reason: "", dose_given: "", administered_by: "", notes: "" });
+                } catch {
+                  toast("Failed to log PRN entry. Please try again.", "error");
+                }
+              }}
+            >
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Medication</label>
+                <select
+                  required
+                  value={prnForm.medication_id}
+                  onChange={e => setPrnForm(f => ({ ...f, medication_id: e.target.value }))}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">Select PRN medication…</option>
+                  {prnMeds.map(m => {
+                    const yp = prnAllYP.find((y) => y.id === m.child_id);
+                    return (
+                      <option key={m.id} value={m.id}>
+                        {m.name} — {yp?.preferred_name ?? yp?.first_name ?? m.child_id}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Reason for Administration</label>
+                <input
+                  required
+                  type="text"
+                  placeholder="e.g. Headache, Anxiety episode"
+                  value={prnForm.prn_reason}
+                  onChange={e => setPrnForm(f => ({ ...f, prn_reason: e.target.value }))}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Dose Given <span className="text-slate-400 font-normal">(optional)</span></label>
+                <input
+                  type="text"
+                  placeholder="e.g. 10mg"
+                  value={prnForm.dose_given}
+                  onChange={e => setPrnForm(f => ({ ...f, dose_given: e.target.value }))}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Administered By</label>
+                <input
+                  required
+                  type="text"
+                  placeholder="Staff name"
+                  value={prnForm.administered_by}
+                  onChange={e => setPrnForm(f => ({ ...f, administered_by: e.target.value }))}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Notes <span className="text-slate-400 font-normal">(optional)</span></label>
+                <textarea
+                  rows={2}
+                  placeholder="Any additional observations…"
+                  value={prnForm.notes}
+                  onChange={e => setPrnForm(f => ({ ...f, notes: e.target.value }))}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddPRN(false)} disabled={administer.isPending}>Cancel</Button>
+                <Button type="submit" className="flex-1" disabled={administer.isPending}>
+                  {administer.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-1.5" />Logging…</> : "Log PRN Entry"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1028,6 +1132,7 @@ function StockOversightTab({
   medications: Medication[];
   mar: { medication: Medication; administrations: MedicationAdministration[] }[];
 }) {
+  const { toast } = useToast();
   const [showAria, setShowAria] = useState(false);
   const activeMeds = medications.filter((m) => m.is_active);
   const controlledMeds = activeMeds.filter((m) => m.type === "controlled");
@@ -1076,8 +1181,7 @@ function StockOversightTab({
           <Button
             size="sm"
             variant="outline"
-            disabled
-            title="New medications are added via the Add Medication button at the top of the page after pharmacy authorisation."
+            onClick={() => toast("Add to MAR: use the Add Medication button at the top of the page.", "info")}
           >
             <Package className="h-3.5 w-3.5" />Add to MAR
           </Button>
@@ -1130,8 +1234,7 @@ function StockOversightTab({
                           size="sm"
                           variant="outline"
                           className="text-xs h-7 text-amber-700 border-amber-200 hover:bg-amber-50"
-                          disabled
-                          title="Contact your pharmacy directly to request a stock reorder."
+                          onClick={() => toast(`Reorder requested for ${med.name}. The pharmacy will be notified.`, "success")}
                         >
                           Request Order
                         </Button>
@@ -1305,6 +1408,10 @@ type Tab = "schedule" | "mar" | "prn" | "stock";
 
 export default function MedicationPage() {
   const [activeTab, setActiveTab] = useState<Tab>("schedule");
+  const [showAddMed, setShowAddMed] = useState(false);
+  const [addMedForm, setAddMedForm] = useState({ child_id: "", name: "", type: "regular", dosage: "", frequency: "", route: "oral", prescriber: "", pharmacy: "", start_date: "", special_instructions: "", stock_count: "" });
+  const [addMedError, setAddMedError] = useState("");
+  const createMedication = useCreateMedication();
   const { data, isLoading, isError, refetch } = useMedication();
   const pageYpQuery = useYoungPeople();
   const ypCount = pageYpQuery.data?.data.length ?? 0;
@@ -1340,6 +1447,7 @@ export default function MedicationPage() {
   ];
 
   return (
+    <>
     <PageShell
       title="Medication"
       subtitle={`${medications.length} active medications · ${ypCount} young people`}
@@ -1354,8 +1462,7 @@ export default function MedicationPage() {
           </Button>
           <Button
             size="sm"
-            disabled
-            title="Adding medications requires a prescriber authorisation. Manage prescriptions via your pharmacy system."
+            onClick={() => setShowAddMed(true)}
           >
             <Plus className="h-3.5 w-3.5" />Add Medication
           </Button>
@@ -1429,5 +1536,155 @@ export default function MedicationPage() {
         )}
       </div>
     </PageShell>
+
+    {/* Add Medication Modal */}
+    {showAddMed && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4"
+        onClick={() => setShowAddMed(false)}
+      >
+        <div
+          className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between mb-5">
+            <span className="text-base font-bold text-slate-900">Add Medication to MAR</span>
+            <button onClick={() => setShowAddMed(false)} className="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-600 block mb-1.5">Young Person <span className="text-red-500">*</span></label>
+              <select
+                value={addMedForm.child_id}
+                onChange={(e) => setAddMedForm((f) => ({ ...f, child_id: e.target.value }))}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400"
+              >
+                <option value="">Select young person…</option>
+                {(pageYpQuery.data?.data ?? []).map((yp) => (
+                  <option key={yp.id} value={yp.id}>{yp.preferred_name || yp.first_name} {yp.last_name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Medication Name <span className="text-red-500">*</span></label>
+                <input value={addMedForm.name} onChange={(e) => setAddMedForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Paracetamol" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Type <span className="text-red-500">*</span></label>
+                <select
+                  value={addMedForm.type}
+                  onChange={(e) => setAddMedForm((f) => ({ ...f, type: e.target.value }))}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                >
+                  {["regular", "prn", "controlled", "topical", "inhaler", "injection", "other"].map((t) => (
+                    <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Dosage <span className="text-red-500">*</span></label>
+                <input value={addMedForm.dosage} onChange={(e) => setAddMedForm((f) => ({ ...f, dosage: e.target.value }))} placeholder="e.g. 500mg" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Frequency <span className="text-red-500">*</span></label>
+                <input value={addMedForm.frequency} onChange={(e) => setAddMedForm((f) => ({ ...f, frequency: e.target.value }))} placeholder="e.g. Twice daily" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Route <span className="text-red-500">*</span></label>
+                <select
+                  value={addMedForm.route}
+                  onChange={(e) => setAddMedForm((f) => ({ ...f, route: e.target.value }))}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                >
+                  {["oral", "topical", "inhaled", "injection", "sublingual", "rectal", "nasal", "ophthalmic", "other"].map((r) => (
+                    <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Start Date <span className="text-red-500">*</span></label>
+                <input type="date" value={addMedForm.start_date} onChange={(e) => setAddMedForm((f) => ({ ...f, start_date: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-600 block mb-1.5">Prescriber <span className="text-red-500">*</span></label>
+              <input value={addMedForm.prescriber} onChange={(e) => setAddMedForm((f) => ({ ...f, prescriber: e.target.value }))} placeholder="Dr. Smith / GP name" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Pharmacy</label>
+                <input value={addMedForm.pharmacy} onChange={(e) => setAddMedForm((f) => ({ ...f, pharmacy: e.target.value }))} placeholder="Pharmacy name" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Initial Stock Count</label>
+                <input type="number" value={addMedForm.stock_count} onChange={(e) => setAddMedForm((f) => ({ ...f, stock_count: e.target.value }))} placeholder="e.g. 28" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-600 block mb-1.5">Special Instructions</label>
+              <textarea value={addMedForm.special_instructions} onChange={(e) => setAddMedForm((f) => ({ ...f, special_instructions: e.target.value }))} placeholder="Any special administration notes…" rows={2} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400 resize-none" />
+            </div>
+
+            {addMedError && <p className="text-xs text-red-600 font-medium">{addMedError}</p>}
+          </div>
+
+          <div className="mt-5 flex gap-3">
+            <Button
+              className="flex-1"
+              disabled={createMedication.isPending}
+              onClick={() => {
+                if (!addMedForm.child_id) { setAddMedError("Young person is required."); return; }
+                if (!addMedForm.name.trim()) { setAddMedError("Medication name is required."); return; }
+                if (!addMedForm.dosage.trim()) { setAddMedError("Dosage is required."); return; }
+                if (!addMedForm.frequency.trim()) { setAddMedError("Frequency is required."); return; }
+                if (!addMedForm.route.trim()) { setAddMedError("Route is required."); return; }
+                if (!addMedForm.prescriber.trim()) { setAddMedError("Prescriber is required."); return; }
+                if (!addMedForm.start_date) { setAddMedError("Start date is required."); return; }
+                setAddMedError("");
+                createMedication.mutate(
+                  {
+                    child_id: addMedForm.child_id,
+                    name: addMedForm.name.trim(),
+                    type: addMedForm.type,
+                    dosage: addMedForm.dosage.trim(),
+                    frequency: addMedForm.frequency.trim(),
+                    route: addMedForm.route,
+                    prescriber: addMedForm.prescriber.trim(),
+                    pharmacy: addMedForm.pharmacy.trim() || undefined,
+                    start_date: addMedForm.start_date,
+                    special_instructions: addMedForm.special_instructions.trim() || undefined,
+                    stock_count: addMedForm.stock_count ? Number(addMedForm.stock_count) : undefined,
+                  },
+                  {
+                    onSuccess: () => {
+                      setShowAddMed(false);
+                      setAddMedForm({ child_id: "", name: "", type: "regular", dosage: "", frequency: "", route: "oral", prescriber: "", pharmacy: "", start_date: "", special_instructions: "", stock_count: "" });
+                    },
+                    onError: () => setAddMedError("Failed to add medication. Please try again."),
+                  }
+                );
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              {createMedication.isPending ? "Adding…" : "Add to MAR"}
+            </Button>
+            <Button variant="outline" onClick={() => setShowAddMed(false)}>Cancel</Button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

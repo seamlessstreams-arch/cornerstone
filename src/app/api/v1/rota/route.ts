@@ -60,3 +60,26 @@ export async function GET(req: NextRequest) {
     },
   });
 }
+
+export async function POST(req: NextRequest) {
+  const body = await req.json();
+  const { staff_id, date, shift_type, start_time, end_time } = body;
+
+  if (!staff_id) return NextResponse.json({ error: "staff_id is required" }, { status: 400 });
+  if (!date) return NextResponse.json({ error: "date is required" }, { status: 400 });
+  if (!shift_type) return NextResponse.json({ error: "shift_type is required" }, { status: 400 });
+  if (!start_time) return NextResponse.json({ error: "start_time is required" }, { status: 400 });
+  if (!end_time) return NextResponse.json({ error: "end_time is required" }, { status: 400 });
+
+  const shift = db.shifts.create({
+    staff_id,
+    date,
+    shift_type,
+    start_time,
+    end_time,
+    break_minutes: body.break_minutes ?? 30,
+    notes: body.notes ?? null,
+  });
+
+  return NextResponse.json({ data: shift }, { status: 201 });
+}

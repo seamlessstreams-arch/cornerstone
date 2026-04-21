@@ -1,20 +1,23 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   MessageSquare, Clock, AlertCircle, Loader2, Info,
-  Video, Phone, MapPin, Users, Star, Shield, Heart,
+  Video, Phone, MapPin, Users, Star, Shield, Heart, Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   useRecruitment,
+  useScheduleInterview,
   type Interview,
   type CandidateDetail,
 } from "@/hooks/use-recruitment";
+import { useToast } from "@/components/ui/toast";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -174,9 +177,13 @@ function InterviewCard({ interview, candidateName, roleApplied }: InterviewCardP
         {/* Actions */}
         <div className="flex gap-2 pt-1">
           {completed ? (
-            <Button size="sm" variant="outline" className="h-7 text-xs" disabled title="Interview scores are recorded in the candidate profile.">View Scores</Button>
+            <Button size="sm" variant="outline" className="h-7 text-xs" asChild>
+              <Link href={`/recruitment/candidates/${interview.candidate_id}`}>View Scores</Link>
+            </Button>
           ) : (
-            <Button size="sm" variant="outline" className="h-7 text-xs" disabled title="Add interview scores from the candidate profile page.">Add Scores</Button>
+            <Button size="sm" variant="outline" className="h-7 text-xs" asChild>
+              <Link href={`/recruitment/candidates/${interview.candidate_id}`}>Add Scores</Link>
+            </Button>
           )}
         </div>
       </CardContent>
@@ -193,7 +200,17 @@ interface InterviewWithCandidate extends Interview {
 
 export default function InterviewsPage() {
   const [tab, setTab] = useState<InterviewTab>("upcoming");
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [form, setForm] = useState({
+    candidate_id: "",
+    scheduled_at: "",
+    mode: "in_person" as "in_person" | "video" | "phone",
+    location: "",
+    notes: "",
+  });
   const { data, isLoading, isError, error } = useRecruitment();
+  const scheduleInterview = useScheduleInterview();
+  const { toast } = useToast();
 
   const allInterviews = useMemo<InterviewWithCandidate[]>(() => {
     if (!data?.candidates) return [];
@@ -220,10 +237,34 @@ export default function InterviewsPage() {
     { key: "all", label: "All" },
   ];
 
+  async function handleSchedule(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      await scheduleInterview.mutateAsync({
+        candidate_id: form.candidate_id,
+        scheduled_at: new Date(form.scheduled_at).toISOString(),
+        mode: form.mode,
+        location: form.location || undefined,
+        notes: form.notes || undefined,
+      });
+      toast("Interview scheduled successfully.", "success");
+      setShowSchedule(false);
+      setForm({ candidate_id: "", scheduled_at: "", mode: "in_person", location: "", notes: "" });
+    } catch {
+      toast("Failed to schedule interview. Please try again.", "error");
+    }
+  }
+
   return (
+    <>
     <PageShell
       title="Interviews"
       subtitle="Panel interviews with safer recruitment compliance"
+      actions={
+        <Button size="sm" className="flex items-center gap-1.5" onClick={() => setShowSchedule(true)}>
+          <Plus className="h-4 w-4" /> Schedule Interview
+        </Button>
+      }
     >
       {/* Compliance note */}
       <div className="rounded-2xl bg-blue-50 border border-blue-200 p-4 flex gap-3 mb-6">
@@ -285,5 +326,91 @@ export default function InterviewsPage() {
         </div>
       )}
     </PageShell>
+
+    {/* Schedule Interview Modal */}
+    {showSchedule && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+          <h2 className="text-base font-semibold text-slate-900 mb-4">Schedule Interview</h2>
+          <form onSubmit={handleSchedule} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Candidate</label>
+              <select
+                required
+                value={form.candidate_id}
+                onChange={e => setForm(f => ({ ...f, candidate_id: e.target.value }))}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Select candidate…</option>
+                {(data?.candidates ?? []).map((c: CandidateDetail) => (
+                  <option key={c.id} value={c.id}>
+                    {c.first_name} {c.last_name} — {c.role_applied}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Date & Time</label>
+              <input
+                required
+                type="datetime-local"
+                value={form.scheduled_at}
+                onChange={e => setForm(f => ({ ...f, scheduled_at: e.target.value }))}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Mode</label>
+              <select
+                value={form.mode}
+                onChange={e => setForm(f => ({ ...f, mode: e.target.value as "in_person" | "video" | "phone" }))}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="in_person">In Person</option>
+                <option value="video">Video</option>
+                <option value="phone">Phone</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Location / Link <span className="text-slate-400 font-normal">(optional)</span></label>
+              <input
+                type="text"
+                placeholder={form.mode === "in_person" ? "e.g. Meeting Room 1" : "e.g. Teams link"}
+                value={form.location}
+                onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Notes <span className="text-slate-400 font-normal">(optional)</span></label>
+              <textarea
+                rows={2}
+                placeholder="Panel members, preparation notes…"
+                value={form.notes}
+                onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+              />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowSchedule(false)}
+                disabled={scheduleInterview.isPending}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" className="flex-1" disabled={scheduleInterview.isPending}>
+                {scheduleInterview.isPending ? (
+                  <><Loader2 className="h-4 w-4 animate-spin mr-1.5" /> Scheduling…</>
+                ) : "Schedule Interview"}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

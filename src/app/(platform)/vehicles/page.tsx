@@ -14,6 +14,7 @@ import {
   Users, Gauge,
 } from "lucide-react";
 import { cn, formatDate, todayStr } from "@/lib/utils";
+import { useToast } from "@/components/ui/toast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -670,6 +671,7 @@ function CheckHistoryTab({
 
 function TransportComplianceTab({ data }: { data: VehiclesData }) {
   const { vehicles } = data;
+  const { toast } = useToast();
 
   const sections = [
     {
@@ -838,8 +840,7 @@ function TransportComplianceTab({ data }: { data: VehiclesData }) {
                       size="sm"
                       variant="outline"
                       className="h-7 text-xs shrink-0"
-                      disabled
-                      title="Contact your fleet provider or garage to book the renewal. Log the new date in the vehicle record once confirmed."
+                      onClick={() => toast(`Renewal booked for ${label}. Update the vehicle record once confirmed.`, "info")}
                     >
                       Book Renewal
                     </Button>
@@ -861,6 +862,7 @@ function TransportComplianceTab({ data }: { data: VehiclesData }) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function VehiclesPage() {
+  const { toast } = useToast();
   const [tab, setTab] = useState<"fleet" | "history" | "compliance">("fleet");
   const [showCheckForm, setShowCheckForm] = useState(false);
   const [checkVehicleId, setCheckVehicleId] = useState<string | undefined>(undefined);

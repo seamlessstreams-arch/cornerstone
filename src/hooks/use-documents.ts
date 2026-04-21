@@ -27,3 +27,18 @@ export function useSignDocument() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["documents"] }),
   });
 }
+
+export function useCreateDocument() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      title: string;
+      category: string;
+      description?: string;
+      expiry_date?: string;
+      requires_read_sign?: boolean;
+      tags?: string;
+    }) => api.post<{ data: Document }>("/documents", data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["documents"] }),
+  });
+}

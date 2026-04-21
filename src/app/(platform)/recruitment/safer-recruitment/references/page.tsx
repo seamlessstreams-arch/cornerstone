@@ -12,9 +12,11 @@ import {
 import { cn } from "@/lib/utils";
 import {
   useRecruitment,
+  useUpdateReference,
   type RecruitmentReference,
   type CandidateDetail,
 } from "@/hooks/use-recruitment";
+import { useToast } from "@/components/ui/toast";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -61,9 +63,11 @@ interface RefRowProps {
   reference: RecruitmentReference;
   candidateName: string;
   candidateStage: string;
+  onMarkReceived: (id: string) => void;
+  isReceived: boolean;
 }
 
-function ReferenceRow({ reference, candidateName, candidateStage }: RefRowProps) {
+function ReferenceRow({ reference, candidateName, candidateStage, onMarkReceived, isReceived }: RefRowProps) {
   const overdue = isOverdue(reference);
   const daysPending = reference.requested_date ? daysSince(reference.requested_date) : null;
   const daysReceived = reference.received_date ? daysSince(reference.received_date) : null;
@@ -155,18 +159,18 @@ function ReferenceRow({ reference, candidateName, candidateStage }: RefRowProps)
       {/* Actions */}
       <div className="flex gap-2 pt-1">
         {(reference.status === "requested" || reference.status === "not_requested") && (
-          <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" disabled title="Reference chase emails require the email integration to be configured.">
+          <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" disabled>
             <Mail className="h-3 w-3" />Chase
           </Button>
         )}
-        {reference.status !== "satisfactory" && reference.status !== "unsatisfactory" && reference.status !== "received" && (
-          <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" disabled title="Mark references as received once the response is in hand. Update status in the candidate profile.">
+        {!isReceived && reference.status !== "satisfactory" && reference.status !== "unsatisfactory" && reference.status !== "received" && (
+          <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => onMarkReceived(reference.id)}>
             <CheckCircle2 className="h-3 w-3" />Mark Received
           </Button>
         )}
-        {(reference.status === "received" || reference.status === "satisfactory" || reference.status === "unsatisfactory") && (
-          <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" disabled title="Reference responses are stored in the Documents section under the candidate's file.">
-            <ExternalLink className="h-3 w-3" />View Response
+        {(isReceived || reference.status === "received" || reference.status === "satisfactory" || reference.status === "unsatisfactory") && (
+          <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" asChild>
+            <a href="/documents" target="_blank" rel="noreferrer"><ExternalLink className="h-3 w-3" />View Response</a>
           </Button>
         )}
       </div>
@@ -178,21 +182,42 @@ function ReferenceRow({ reference, candidateName, candidateStage }: RefRowProps)
 
 type RefWithCandidate = RecruitmentReference & {
   candidateName: string;
+  candidateId: string;
   candidateStage: string;
 };
 
 export default function ReferencesPage() {
   const [filter, setFilter] = useState<RefFilter>("all");
   const [search, setSearch] = useState("");
+  const [receivedIds, setReceivedIds] = useState<Set<string>>(new Set());
   const { data, isLoading, isError, error } = useRecruitment();
+  const updateReference = useUpdateReference();
+  const { toast } = useToast();
+
+  async function handleMarkReceived(referenceId: string, candidateId: string) {
+    if (receivedIds.has(referenceId)) return;
+    try {
+      await updateReference.mutateAsync({
+        referenceId,
+        candidateId,
+        data: {
+          status: "received",
+          received_date: new Date().toISOString(),
+        },
+      });
+      setReceivedIds(prev => new Set([...prev, referenceId]));
+      toast("Reference marked as received.", "success");
+    } catch {
+      toast("Failed to update reference. Please try again.", "error");
+    }
+  }
 
   const allRefs = useMemo<RefWithCandidate[]>(() => {
     if (!data?.candidates) return [];
     return data.candidates.flatMap((c: CandidateDetail) =>
       c.references.map(r => ({
         ...r,
-        candidateName: `${c.first_name} ${c.last_name}`,
-        candidateStage: c.stage,
+        candidateName: `${c.first_name} ${c.last_name}`,          candidateId: c.id,        candidateStage: c.stage,
       }))
     );
   }, [data]);
@@ -314,6 +339,8 @@ export default function ReferencesPage() {
               reference={r}
               candidateName={r.candidateName}
               candidateStage={r.candidateStage}
+              onMarkReceived={(id) => handleMarkReceived(id, r.candidateId)}
+              isReceived={receivedIds.has(r.id)}
             />
           ))}
         </div>

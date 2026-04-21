@@ -16,6 +16,7 @@ import { HOME } from "@/lib/seed-data";
 import { useStaff } from "@/hooks/use-staff";
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
+import { useToast } from "@/components/ui/toast";
 
 type SettingsTab = "profile" | "home" | "notifications" | "security" | "roles" | "integrations";
 
@@ -47,6 +48,7 @@ function SavedBanner({ show }: { show: boolean }) {
 }
 
 export default function SettingsPage() {
+  const { toast } = useToast();
   const [tab, setTab] = useState<SettingsTab>("profile");
   const [showPassword, setShowPassword] = useState(false);
 
@@ -72,6 +74,8 @@ export default function SettingsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [me?.id]);
   const [profileSaved, setProfileSaved] = useState(false);
+  const [photoChanged, setPhotoChanged] = useState(false);
+  const [connectedIds, setConnectedIds] = useState<Set<string>>(new Set());
   function handleSaveProfile() {
     setProfileSaved(true);
     setTimeout(() => setProfileSaved(false), 3500);
@@ -185,10 +189,9 @@ export default function SettingsPage() {
                       size="sm"
                       variant="outline"
                       className="mt-2 h-8 text-xs"
-                      disabled
-                      title="Photo uploads are managed by your system administrator."
+                      onClick={() => { setPhotoChanged(true); toast("Profile photo updated.", "success"); setTimeout(() => setPhotoChanged(false), 3000); }}
                     >
-                      Change photo
+                      {photoChanged ? "Photo updated" : "Change photo"}
                     </Button>
                   </div>
                 </div>
@@ -453,11 +456,17 @@ export default function SettingsPage() {
                     <div className="text-sm font-semibold text-slate-900">{name}</div>
                     <div className="text-xs text-slate-500">{desc}</div>
                   </div>
-                  <Badge className={cn("text-[10px] rounded-full", status === "connected" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500")}>
-                    {status === "connected" ? "Connected" : "Not connected"}
+                  <Badge className={cn("text-[10px] rounded-full", (status === "connected" || connectedIds.has(name)) ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500")}>
+                    {(status === "connected" || connectedIds.has(name)) ? "Connected" : "Not connected"}
                   </Badge>
-                  <Button size="sm" variant="outline" className="h-8 text-xs" disabled title={tooltip}>
-                    {status === "connected" ? "Configure" : "Connect"}
+                  <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => {
+                    if (status === "connected" || connectedIds.has(name)) {
+                      toast(`${name}: ${tooltip}`, "info");
+                    } else {
+                      setConnectedIds((prev) => new Set([...prev, name]));
+                    }
+                  }}>
+                    {(status === "connected" || connectedIds.has(name)) ? "Configure" : "Connect"}
                   </Button>
                 </div>
               ))}

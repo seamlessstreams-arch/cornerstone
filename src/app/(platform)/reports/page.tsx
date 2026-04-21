@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -98,6 +99,68 @@ export default function ReportsPage() {
   // Leave derived stats
   const leaveMeta = leaveQuery.data?.meta;
 
+  // ── CSV export ─────────────────────────────────────────────────────────────
+  function handleExportCSV() {
+    let rows: string[][] = [];
+    let filename = "cornerstone-report";
+
+    function escape(v: unknown): string {
+      const s = String(v ?? "").replace(/"/g, '""');
+      return `"${s}"`;
+    }
+
+    if (view === "overview") {
+      filename = "cornerstone-overview-report";
+      rows = [
+        ["Metric", "Value"],
+        ["Task Completion Rate (%)", String(taskCompletionRate)],
+        ["Total Tasks", String(allTasks.length)],
+        ["Completed Tasks", String(completedTasks.length)],
+        ["Overdue Tasks", String(overdueTasks.length)],
+        ["Training Compliance (%)", String(trainingCompliancePct)],
+        ["Total Incidents", String(allIncidents.length)],
+        ["Open Incidents", String(openIncidents.length)],
+        ["Closed Incidents", String(closedIncidents.length)],
+        ["Active Staff", String(activeStaff.length)],
+        ["Young People (Current)", String(allYP.length)],
+        ["Export Period", period],
+        ["Export Date", today],
+      ];
+    } else if (view === "workforce") {
+      filename = "cornerstone-workforce-report";
+      rows = [["Name", "Role", "Job Title", "Employment Type", "Status", "Start Date", "Contracted Hours", "DBS Number", "DBS Issue Date"]];
+      for (const s of allStaff) {
+        rows.push([s.full_name, s.role, s.job_title, s.employment_type, s.is_active ? "Active" : "Inactive", s.start_date, String(s.contracted_hours), s.dbs_number ?? "", s.dbs_issue_date ?? ""]);
+      }
+    } else if (view === "compliance") {
+      filename = "cornerstone-compliance-report";
+      rows = [["Staff Name", "Role", "DBS Checked", "DBS Update Service", "Next Supervision Due", "Next Appraisal Due"]];
+      for (const s of allStaff.filter((x) => x.is_active)) {
+        rows.push([s.full_name, s.role, s.dbs_issue_date ? "Yes" : "No", s.dbs_update_service ? "Yes" : "No", s.next_supervision_due ?? "Not set", s.next_appraisal_due ?? "Not set"]);
+      }
+    } else if (view === "incidents") {
+      filename = "cornerstone-incidents-report";
+      rows = [["Reference", "Type", "Severity", "Status", "Young Person", "Date", "Time", "Location", "Reported By", "Requires Oversight", "Oversight Completed"]];
+      for (const inc of allIncidents) {
+        const yp = allYP.find((y) => y.id === inc.child_id);
+        const ypName = yp ? `${yp.preferred_name ?? yp.first_name} ${yp.last_name}` : inc.child_id;
+        rows.push([inc.reference, inc.type, inc.severity, inc.status, ypName, inc.date, inc.time, inc.location ?? "", inc.reported_by, inc.requires_oversight ? "Yes" : "No", inc.oversight_by ? "Yes" : "No"]);
+      }
+    } else {
+      filename = `cornerstone-${view}-report`;
+      rows = [["Report", "Value"], [`${view} report`, `Exported on ${today} — period: ${period}`]];
+    }
+
+    const csv = rows.map((r) => r.map(escape).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${filename}-${today}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const tabs: { id: ReportView; label: string; icon: React.ElementType }[] = [
     { id: "overview", label: "Overview", icon: BarChart3 },
     { id: "workforce", label: "Workforce", icon: Users },
@@ -130,8 +193,11 @@ export default function ReportsPage() {
               >{p}</button>
             ))}
           </div>
-          <Button variant="outline" size="sm" disabled title="PDF export requires the reporting integration to be configured by your system administrator.">
-            <Download className="h-3.5 w-3.5 mr-1" />Export PDF
+          <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={isLoading}>
+            <Download className="h-3.5 w-3.5 mr-1" />Export CSV
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/reports/intelligence">Intelligence Hub</Link>
           </Button>
         </div>
       }

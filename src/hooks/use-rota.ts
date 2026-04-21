@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "./use-api";
 import type { Shift, LeaveRequest } from "@/types";
 
@@ -26,5 +26,21 @@ export function useRota(weekStart: string) {
     queryKey: ["rota", weekStart],
     queryFn: () => api.get<RotaResponse>(`/rota?week_start=${weekStart}`),
     enabled: !!weekStart,
+  });
+}
+
+export function useCreateShift() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      staff_id: string;
+      date: string;
+      shift_type: string;
+      start_time: string;
+      end_time: string;
+      break_minutes?: number;
+      notes?: string;
+    }) => api.post<{ data: Shift }>("/rota", data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["rota"] }),
   });
 }

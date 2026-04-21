@@ -16,8 +16,9 @@ import {
   AlertTriangle, ArrowLeft, Clock, MapPin, User,
   CheckCircle2, Bell, FileText, Shield, ClipboardCheck,
   Loader2, AlertCircle, ChevronRight, Heart, BookOpen,
+  Sparkles, TrendingUp, Link2,
 } from "lucide-react";
-import { useIncident, useUpdateIncident } from "@/hooks/use-incidents";
+import { useIncident, useUpdateIncident, useSimilarIncidents, useIncidentRiskAssessment } from "@/hooks/use-incidents";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useCurrentUser } from "@/hooks/use-auth";
 import { PERMISSIONS } from "@/lib/permissions";
@@ -168,8 +169,10 @@ export default function IncidentDetailPage({ params }: { params: Promise<{ id: s
   const canManage    = can(PERMISSIONS.MANAGE_INCIDENTS);
   const canOversight = can(PERMISSIONS.MANAGE_SAFEGUARDING) || canManage;
 
-  const incidentQ = useIncident(id);
-  const incident  = incidentQ.data?.data;
+  const incidentQ        = useIncident(id);
+  const incident          = incidentQ.data?.data;
+  const similarQ          = useSimilarIncidents(incident?.id);
+  const riskQ             = useIncidentRiskAssessment(incident?.id);
 
   const [showOversight, setShowOversight] = useState(false);
   const [showOutcome,   setShowOutcome]   = useState(false);
@@ -299,7 +302,7 @@ export default function IncidentDetailPage({ params }: { params: Promise<{ id: s
               size="sm"
               variant="outline"
               className="ml-auto text-xs"
-              onClick={() => router.push(`/young-people`)}
+              onClick={() => router.push(`/young-people/${incident.child_id}`)}
             >
               View Profile <ChevronRight className="h-3.5 w-3.5 ml-1" />
             </Button>
@@ -459,6 +462,99 @@ export default function IncidentDetailPage({ params }: { params: Promise<{ id: s
             </div>
           </div>
         )}
+
+        {/* ── Intelligence Context ──────────────────────────────────────────── */}
+        <div className="rounded-2xl border bg-white p-5 space-y-4">
+          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+            <Sparkles className="h-3.5 w-3.5 text-violet-500" />Intelligence Context
+          </h3>
+
+          {/* Risk Assessment */}
+          <div>
+            <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <TrendingUp className="h-3 w-3" />Risk Assessment
+            </div>
+            {riskQ.isPending ? (
+              <div className="text-xs text-slate-400 flex items-center gap-1.5">
+                <Loader2 className="h-3 w-3 animate-spin" />Calculating…
+              </div>
+            ) : riskQ.data?.data ? (() => {
+              const ra = riskQ.data.data;
+              const riskColor = ra.level === "critical" ? "border-red-300 bg-red-50" : ra.level === "high" ? "border-orange-300 bg-orange-50" : ra.level === "medium" ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-slate-50";
+              const scoreColor = ra.level === "critical" ? "text-red-700" : ra.level === "high" ? "text-orange-700" : ra.level === "medium" ? "text-amber-700" : "text-slate-600";
+              return (
+                <div className={`rounded-xl border p-3 space-y-2 ${riskColor}`}>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm font-bold ${scoreColor}`}>Risk Score: {ra.score}/100</span>
+                    <span className={`text-xs font-semibold uppercase tracking-wide capitalize ${scoreColor}`}>{ra.level}</span>
+                  </div>
+                  <div className="space-y-1">
+                    {ra.factors.map((f, i) => (
+                      <div key={i} className="flex items-center justify-between text-xs text-slate-600">
+                        <span>{f.label}</span>
+                        <span className="font-medium">+{f.weight}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {ra.recommendedActions.length > 0 && (
+                    <div className="pt-1 border-t border-slate-200">
+                      <div className="text-[10px] font-semibold text-slate-500 uppercase mb-1">Recommended Actions</div>
+                      <ul className="space-y-0.5">
+                        {ra.recommendedActions.map((act, i) => (
+                          <li key={i} className="text-xs text-slate-700 flex items-start gap-1.5">
+                            <span className="text-slate-400 shrink-0">·</span>{act}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })() : null}
+          </div>
+
+          {/* Similar Incidents */}
+          <div>
+            <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <Link2 className="h-3 w-3" />Similar Incidents (last 90 days)
+            </div>
+            {similarQ.isPending ? (
+              <div className="text-xs text-slate-400 flex items-center gap-1.5">
+                <Loader2 className="h-3 w-3 animate-spin" />Searching…
+              </div>
+            ) : (similarQ.data?.data ?? []).length === 0 ? (
+              <div className="text-xs text-slate-400">No similar incidents found in the last 90 days.</div>
+            ) : (
+              <div className="space-y-2">
+                {(similarQ.data?.data ?? []).slice(0, 5).map((r) => (
+                  <button
+                    key={r.incident.id}
+                    onClick={() => router.push(`/incidents/${r.incident.id}`)}
+                    className="w-full text-left rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 px-3 py-2.5 transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <span className="font-medium text-slate-900">{r.incident.reference}</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-slate-400">{r.daysSince}d ago</span>
+                        <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {r.matchReasons.map((reason) => (
+                        <span key={reason} className="rounded-full bg-violet-100 text-violet-700 text-[9px] px-2 py-0.5 font-medium">{reason}</span>
+                      ))}
+                    </div>
+                    {r.patternNote && (
+                      <div className="mt-1.5 text-[10px] text-amber-700 flex items-start gap-1">
+                        <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />{r.patternNote}
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
 
       </div>
     </PageShell>
