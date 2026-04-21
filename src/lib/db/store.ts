@@ -1401,6 +1401,7 @@ export const db = {
   // ── Missing Episodes ──────────────────────────────────────────────────────
   missingEpisodes: {
     findAll: () => store.missingEpisodes,
+    findById: (id: string) => store.missingEpisodes.find((m) => m.id === id),
     findByChild: (childId: string) => store.missingEpisodes.filter((m) => m.child_id === childId),
     findActive: () => store.missingEpisodes.filter((m) => m.status === "active"),
     create: (data: Partial<MissingEpisode>): MissingEpisode => {
@@ -1415,6 +1416,12 @@ export const db = {
       } as MissingEpisode;
       store.missingEpisodes.push(episode);
       return episode;
+    },
+    update: (id: string, data: Partial<MissingEpisode>): MissingEpisode | null => {
+      const idx = store.missingEpisodes.findIndex((m) => m.id === id);
+      if (idx === -1) return null;
+      store.missingEpisodes[idx] = { ...store.missingEpisodes[idx], ...data };
+      return store.missingEpisodes[idx];
     },
   },
 

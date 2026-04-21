@@ -579,6 +579,7 @@ export function canAccessModule(role: AppRole, module: string): boolean {
     inspection: PERMISSIONS.VIEW_INSPECTION,
     reports: PERMISSIONS.VIEW_REPORTS,
     settings: PERMISSIONS.MANAGE_SETTINGS,
+    "missing-episodes": PERMISSIONS.VIEW_SAFEGUARDING,
   };
   const required = map[module];
   if (!required) return true; // unknown module defaults to accessible

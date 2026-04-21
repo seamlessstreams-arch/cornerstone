@@ -17,7 +17,7 @@ import {
   BarChart3, Receipt, Clock, ChevronDown, ChevronRight,
   PanelLeftClose, PanelLeft, Settings, Building2, Car, Activity,
   User, Fingerprint, FileCheck, Mail, ChevronUp, HardHat, FolderSearch,
-  LayoutList, PieChart, ScanLine, Sparkles,
+  LayoutList, PieChart, ScanLine, Sparkles, UserX,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AcaciaLogo } from "@/components/branding/acacia-logo";
@@ -34,7 +34,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   MessageSquare, GraduationCap, UserPlus, FileText, ClipboardCheck, Award,
   BarChart3, Receipt, Clock, Building2, Car, Activity, User,
   Fingerprint, FileCheck, Mail, HardHat, FolderSearch, LayoutList, PieChart, ScanLine,
-  Sparkles,
+  Sparkles, UserX,
 };
 
 interface NavItem {
@@ -71,8 +71,9 @@ const NAV: NavSection[] = [
       { label: "Young People", href: "/young-people", icon: "Heart",         module: "young-people"                           },
       { label: "Daily Log",    href: "/daily-log",    icon: "BookOpen",      module: "daily-log"                              },
       { label: "Incidents",    href: "/incidents",    icon: "AlertTriangle", module: "incidents",    badgeKey: "incidents"    },
-      { label: "Safeguarding", href: "/safeguarding", icon: "Shield",        module: "safeguarding"           },
-      { label: "Medication",   href: "/medication",   icon: "Pill",          module: "medication"             },
+      { label: "Safeguarding",     href: "/safeguarding",     icon: "Shield",  module: "safeguarding"           },
+      { label: "Missing Episodes",  href: "/missing-episodes", icon: "UserX",   module: "missing-episodes"       },
+      { label: "Medication",        href: "/medication",       icon: "Pill",    module: "medication"             },
     ],
   },
   {
