@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   BookOpen, Plus, Heart, Activity, Star, Smile, Meh, Frown,
-  Moon, Utensils, Loader2, AlertCircle, X,
+  Moon, Utensils, Loader2, AlertCircle, X, Mic, MicOff,
 } from "lucide-react";
+import { useDictation } from "@/hooks/use-dictation";
 import { getStaffName, getYPName } from "@/lib/seed-data";
 import { cn, formatDate } from "@/lib/utils";
 import { useDailyLog, useCreateDailyLog } from "@/hooks/use-daily-log";
@@ -84,6 +85,11 @@ function NewEntryForm({ onClose, onSuccess }: NewEntryFormProps) {
   const [content, setContent] = useState("");
   const [moodScore, setMoodScore] = useState<number | null>(null);
   const [isSignificant, setIsSignificant] = useState(false);
+  const [dictMode] = useState<"append" | "replace">("append");
+
+  const dictation = useDictation((_next, chunk) => {
+    setContent((prev) => dictMode === "replace" ? chunk : (prev ? `${prev} ${chunk}` : chunk));
+  }, { mode: dictMode });
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -139,7 +145,30 @@ function NewEntryForm({ onClose, onSuccess }: NewEntryFormProps) {
 
           {/* Content */}
           <div>
-            <label className="text-xs font-medium text-slate-500 mb-1 block">Notes</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-medium text-slate-500">Notes</label>
+              <button
+                type="button"
+                onClick={dictation.isListening ? dictation.stop : dictation.start}
+                title={dictation.isListening ? "Stop dictation" : "Dictate notes"}
+                className={`flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-medium transition-colors ${
+                  dictation.isListening
+                    ? "bg-red-100 text-red-600 hover:bg-red-200"
+                    : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                }`}
+              >
+                {dictation.isListening ? (
+                  <><MicOff className="h-3 w-3" />Stop</>
+                ) : (
+                  <><Mic className="h-3 w-3" />Dictate</>
+                )}
+              </button>
+            </div>
+            {dictation.isListening && (
+              <div className="flex items-center gap-1.5 mb-1.5 text-[11px] text-red-600">
+                <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />Listening — speak clearly
+              </div>
+            )}
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}

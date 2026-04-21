@@ -10,12 +10,13 @@ import { Avatar } from "@/components/ui/avatar";
 import {
   ArrowRightLeft, Plus, ChevronDown, ChevronRight, Users,
   AlertTriangle, CheckCircle2, Loader2, AlertCircle, X, Pill,
-  ClipboardList, Smile, Meh, Frown, Flag,
+  ClipboardList, Smile, Meh, Frown, Flag, Mic, MicOff,
 } from "lucide-react";
 import { getStaffName, getYPName } from "@/lib/seed-data";
 import type { YoungPerson } from "@/types";
 import { cn, formatDate, todayStr } from "@/lib/utils";
 import { useHandover, useCreateHandover } from "@/hooks/use-handover";
+import { useDictation } from "@/hooks/use-dictation";
 import type { HandoverEntry, HandoverChildUpdate } from "@/types/extended";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -248,6 +249,18 @@ function WriteHandoverForm({ youngPeople, onClose, onSuccess }: WriteFormProps) 
   const [alertInputs, setAlertInputs] = useState<Record<string, string>>(
     Object.fromEntries(currentYP.map((yp) => [yp.id, ""]))
   );
+  const [activeDictTarget, setActiveDictTarget] = useState<string | null>(null);
+
+  const generalDictation = useDictation((_next, chunk) => {
+    setGeneralNotes((prev) => prev ? `${prev} ${chunk}` : chunk);
+  });
+
+  const childKeyNotesDictation = useDictation((_next, chunk) => {
+    if (!activeDictTarget) return;
+    updateChild(activeDictTarget, {
+      key_notes: (childUpdates.find((c) => c.child_id === activeDictTarget)?.key_notes ?? "") + (childUpdates.find((c) => c.child_id === activeDictTarget)?.key_notes ? " " : "") + chunk,
+    });
+  });
 
   function updateChild(childId: string, patch: Partial<HandoverChildUpdate>) {
     setChildUpdates((prev) => prev.map((cu) => cu.child_id === childId ? { ...cu, ...patch } : cu));
@@ -372,7 +385,35 @@ function WriteHandoverForm({ youngPeople, onClose, onSuccess }: WriteFormProps) 
 
                   {/* Key notes */}
                   <div>
-                    <label className="text-[11px] text-slate-500 mb-1 block">Key Notes</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] text-slate-500">Key Notes</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (childKeyNotesDictation.isListening && activeDictTarget === yp.id) {
+                            childKeyNotesDictation.stop();
+                            setActiveDictTarget(null);
+                          } else {
+                            setActiveDictTarget(yp.id);
+                            childKeyNotesDictation.start();
+                          }
+                        }}
+                        className={`flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                          childKeyNotesDictation.isListening && activeDictTarget === yp.id
+                            ? "bg-red-100 text-red-600"
+                            : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                        }`}
+                      >
+                        {childKeyNotesDictation.isListening && activeDictTarget === yp.id
+                          ? <><MicOff className="h-2.5 w-2.5" />Stop</>
+                          : <><Mic className="h-2.5 w-2.5" />Dictate</>}
+                      </button>
+                    </div>
+                    {childKeyNotesDictation.isListening && activeDictTarget === yp.id && (
+                      <div className="flex items-center gap-1 mb-1 text-[10px] text-red-600">
+                        <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />Listening…
+                      </div>
+                    )}
                     <textarea
                       value={cu.key_notes}
                       onChange={(e) => updateChild(yp.id, { key_notes: e.target.value })}
@@ -422,7 +463,27 @@ function WriteHandoverForm({ youngPeople, onClose, onSuccess }: WriteFormProps) 
 
           {/* General notes */}
           <div>
-            <label className="text-xs font-medium text-slate-500 mb-1 block">General Notes</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-medium text-slate-500">General Notes</label>
+              <button
+                type="button"
+                onClick={generalDictation.isListening ? generalDictation.stop : generalDictation.start}
+                className={`flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-medium transition-colors ${
+                  generalDictation.isListening
+                    ? "bg-red-100 text-red-600"
+                    : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                }`}
+              >
+                {generalDictation.isListening
+                  ? <><MicOff className="h-3 w-3" />Stop</>
+                  : <><Mic className="h-3 w-3" />Dictate</>}
+              </button>
+            </div>
+            {generalDictation.isListening && (
+              <div className="flex items-center gap-1.5 mb-1.5 text-[11px] text-red-600">
+                <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />Listening — speak clearly
+              </div>
+            )}
             <textarea
               value={generalNotes}
               onChange={(e) => setGeneralNotes(e.target.value)}
